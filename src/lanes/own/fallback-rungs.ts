@@ -118,8 +118,8 @@ export async function freeFallbackLadder(
     ? await jinaFallback(url, config, options, started, priorDetail)
     : { ok: false, reason: 'unreachable', detail: priorDetail, lane: 'own' };
   if (viaJina.ok) {
-    // ORIGIN-MOVED-1: this rung stepped past a POLICY refusal, not a failed
-    // fetch. Jina follows the same redirect from its own IPs, so a sold or
+    // ORIGIN-MOVED-1: this rung stepped past a POLICY refusal of a fetch that
+    // succeeded. Jina follows the same redirect from its own IPs, so a sold or
     // parked domain returns the new owner's content under the old URL — and
     // without this the caller sees an ordinary success. The refusal travels
     // with the page so a consumer can hold it for review.

@@ -140,7 +140,7 @@ describe('own lane — redirects are re-validated per hop', () => {
     const crawler = createCrawler({ userAgent: 'TestBot/1.0', dnsLookup: publicDns });
     const result = await crawler.crawl(target, 'https://venue.example.com/events');
 
-    // Refused, and NOT silently downgraded into a successful crawl of the
+    // Refused, and never silently downgraded into a successful crawl of the
     // attacker's page.
     expect(result.ok).toBe(false);
   });
@@ -172,7 +172,7 @@ describe('lane selection', () => {
     expect(crawler.vendorRungs()).toEqual([]);
   });
 
-  test('a policy refusal does NOT escalate to the paid lane', async () => {
+  test('a policy refusal does not escalate to the paid lane', async () => {
     let vendorCalled = false;
     globalThis.fetch = (async (input: RequestInfo | URL) => {
       if (String(input).includes('firecrawl')) {

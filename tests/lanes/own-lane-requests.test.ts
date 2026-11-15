@@ -143,7 +143,7 @@ describe('autoRobots — the crawler governs itself (CRAWL-ROBOTS-1)', () => {
     expect(result).toMatchObject({ ok: false, reason: 'blocked' });
   });
 
-  test('robots.txt is fetched once per HOST, not once per page', async () => {
+  test('robots.txt is fetched once per HOST', async () => {
     let robotsFetches = 0;
     globalThis.fetch = (async (input: RequestInfo | URL) => {
       if (String(input).includes('robots.txt')) {

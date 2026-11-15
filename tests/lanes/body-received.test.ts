@@ -43,7 +43,7 @@ describe('a failure says whether an origin answered', () => {
     expect(result.bodyReceived).toBe(true);
   });
 
-  test('a server error does NOT report bodyReceived', async () => {
+  test('a server error does not report bodyReceived', async () => {
     // The other half. Reporting it here would make every outage look like a
     // retainable page, which is worse than not reporting it at all.
     globalThis.fetch = (async () => new Response('down', { status: 503 })) as typeof fetch;

@@ -4,7 +4,7 @@ import type { CrawlTarget } from '@/core/types';
 import { publicDns } from '../helpers';
 
 // PARITY-MAP-1: "what pages does this site have" should cost about one
-// request, not a full crawl that fetches every page to find the next.
+// request; a full crawl would fetch every page to find the next.
 
 const target: CrawlTarget = { baseUrl: 'https://venue.example.com', robotsPolicy: 'allow', active: true };
 
@@ -60,7 +60,7 @@ describe('mapSite finds URLs cheaply', () => {
     const fetched = stub();
     await mapSite(crawler(), target);
 
-    // Everything else is a listing document, not a page body. A crawl would
+    // Everything else is a listing document. A crawl would
     // have fetched /calendar, /menu and the rest to discover their links.
     const pageBodies = fetched.filter((u) => !u.endsWith('/sitemap.xml'));
     expect(pageBodies).toEqual(['https://venue.example.com/']);

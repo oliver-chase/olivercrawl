@@ -41,7 +41,7 @@ export type CrawlConfig = {
   dnsLookup?: DnsLookupFn;
   /**
    * Self-hosted browser-rendering service for JS-only pages. Part of the OWN
-   * lane, not the vendor lane, because it is YOUR infrastructure: point it at
+   * lane because it is YOUR infrastructure: point it at
    * a browserless container you run and it costs no per-call vendor fee.
    * Absent = the rung is skipped and the crawl falls through to Jina, exactly
    * as if it were never configured.
@@ -51,7 +51,7 @@ export type CrawlConfig = {
    * FREE render rung: local headless Chromium via playwright, tried BEFORE
    * the remote render service. Explicit opt-in because the same code often
    * deploys to both a machine that can run a browser and a worker that
-   * cannot — where rendering happens should be a choice, not a crash.
+   * cannot — where rendering happens should be a choice.
    * Requires `npx playwright install chromium` once on the machine; absent
    * playwright degrades silently to the next rung.
    */
@@ -65,7 +65,7 @@ export type CrawlConfig = {
    * posture in its own database should keep that as the source of truth, and
    * silently adding a network call per target would be a surprise. Turned on,
    * it makes the crawler self-governing — the result is cached per host (six
-   * hours for an answer, five minutes for a failure), so it costs one request per host, not per page.
+   * hours for an answer, five minutes for a failure), so it costs one request per host.
    */
   autoRobots?: boolean;
   /** Default caps, overridable per request. */
@@ -182,7 +182,7 @@ export type CrawlConfig = {
   /**
    * DNS-over-HTTPS resolver used when no `dnsLookup` is supplied. Defaults
    * to Cloudflare. Exposed because which resolver sees your crawl traffic is
-   * a privacy and third-party-dependency decision, not a detail — and on a
+   * a privacy and third-party-dependency decision — and on a
    * Node runtime you may prefer to inject `dnsLookup` and use none at all.
    */
   dohEndpoint?: string;

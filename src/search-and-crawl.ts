@@ -14,8 +14,8 @@
 //      exactly as everywhere else.
 //
 // Each result is crawled as its own single-page target, because a search
-// result set spans many unrelated hosts — this is deliberately NOT a site
-// crawl, and same-site rules apply per result, not across them.
+// result set spans many unrelated hosts, so each result is crawled on its own
+// and same-site rules apply per result.
 
 import type { Crawler } from './index.js';
 import type { CrawlOptions, CrawlPage } from './core/types.js';
@@ -49,7 +49,7 @@ export type SearchAndCrawlResult =
       /** The raw search hits, in provider order. */
       results: SearchResult[];
       /** Pages successfully read. May be shorter than `results` — some hosts
-       *  refuse crawling, and that is normal, not a failure of the whole. */
+       *  refuse crawling, and that is normal for a result set. */
       pages: CrawlPage[];
       /** Per-URL reasons for the results that could not be read. */
       skipped: Array<{ url: string; reason: string; detail: string }>;

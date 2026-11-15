@@ -9,7 +9,7 @@
 // the remote render service, then Jina: a real Node runtime (workerd cannot spawn
 // Chromium), an explicit `localRender: true` so a consumer deploying to both a
 // laptop and a worker chooses where rendering happens and never finds out by
-// crash, and playwright actually importing — it is NOT a dependency here.
+// crash, and playwright actually importing — it is never a dependency here.
 //
 // THE IMPORT TRICK: a plain `import('playwright')`, even computed as
 // ['play','wright'].join(''), gets constant-folded by bundler tracers (@vercel/nft,
@@ -36,7 +36,7 @@ import { optionalImport } from '../core/optional-import.js';
 
 /**
  * Redirect hops followed inside the render rung before the chain is refused.
- * A library constant, not a caller option: the ceiling exists so a redirect
+ * A library constant that callers cannot set: the ceiling exists so a redirect
  * loop cannot spin, and a caller who could raise it could restore the spin.
  */
 const MAX_REDIRECT_HOPS = 5;
@@ -234,7 +234,7 @@ export async function renderViaLocalChromium(
     context = await browser.newContext({ serviceWorkers: 'block' });
     await context.addInitScript('delete window.WebSocket; delete window.WebSocketStream;');
     const page = await context.newPage();
-    // RENDER-HOP-1: validate every NAVIGATION hop, not just where the chain
+    // RENDER-HOP-1: validate every NAVIGATION hop, including where the chain
     // ended. Checking only the landing let `site -> 127.0.0.1:P -> site` render
     // normally while the private server received a real request — the request
     // itself is the leak, and a chain that returns home hides it completely.

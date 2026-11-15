@@ -28,7 +28,7 @@ describe('PARITY-HEADERS-1 — a plausible, honest header set', () => {
     expect(headers?.get('accept')).toContain('text/html');
   });
 
-  test('does NOT claim to be Chrome', async () => {
+  test('does not claim to be Chrome', async () => {
     // sec-ch-ua next to an honest bot User-Agent is a half-consistent
     // disguise, which is a stronger tell than no disguise at all.
     let headers: Headers | undefined;

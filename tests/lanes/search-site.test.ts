@@ -26,7 +26,7 @@ function serve(handler: (url: string) => Response) {
 
 const crawler = () => createCrawler({ userAgent: 'T/1 (+https://t.example.com)', dnsLookup: publicDns });
 
-describe('results come from the content region, not the whole page', () => {
+describe('results come from the content region only', () => {
   test('returns real results and not the navigation', async () => {
     // Navigation links such as "Membership" and "Plan your visit" are never
     // hits, since a consumer would crawl them believing they matched.

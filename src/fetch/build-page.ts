@@ -189,7 +189,7 @@ export async function buildPage(input: {
     text: sanitized.text,
     markdown: sanitizedMarkdown.text,
     contentKind: 'html',
-    // Judged on the MAIN content, not the whole page: a site whose nav and
+    // Judged on the MAIN content of the page: a site whose nav and
     // footer are large would otherwise never look empty, which is exactly
     // the page this is meant to catch.
     likelyEmptyState: looksLikeEmptyState(sanitizedMarkdown.text || sanitized.text),
@@ -238,7 +238,7 @@ export async function buildPage(input: {
 // PAGE-SHAPE-1: both constructors here are held to one contract by
 // tests/lanes/page-shape.test.ts, which drives every rung end to end and
 // checks what is IN the page, beyond the fact that a page came back. A dropped
-// field surfaces as worse extraction blamed on the sites, not as an error.
+// field surfaces as worse extraction blamed on the sites, with no error raised.
 /** A rung-reported title, sanitized, or null when it carries an injection signal. */
 function guardedTitle(title: string | null | undefined): string | null {
   if (!title) return null;
@@ -277,7 +277,7 @@ export async function buildTextPage(input: {
    *
    * The vendor rungs are asked for markdown explicitly (Firecrawl with
    * `onlyMainContent`), so their text is markdown and belongs in both fields —
-   * the same value, not a second conversion. Jina returns prose that merely
+   * the same value with no second conversion. Jina returns prose that merely
    * looks markdown-ish, so it leaves this unset and reports an empty
    * `markdown` and claims no structure it did not derive.
    *
@@ -296,7 +296,7 @@ export async function buildTextPage(input: {
     extractorVersion: EXTRACTOR_VERSION,
     // Defaults only for a caller that genuinely ran no guard; every rung that
     // sanitises passes its own numbers. See the field docs above for why the
-    // previous hardcoded 0/false was a lie, not a simplification.
+    // previous hardcoded 0/false was a lie.
     redactionCount: input.redactionCount ?? 0,
     truncated: input.truncated ?? false,
     structuredData: summarizeStructuredData([]),

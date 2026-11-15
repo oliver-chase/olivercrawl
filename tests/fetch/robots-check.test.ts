@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from 'vitest';
 
-// The fetch-layer tests exercise robots parsing, not the SSRF/DNS guard —
+// The fetch-layer tests exercise robots parsing only; the SSRF/DNS guard is covered elsewhere —
 // stub the public-host check so they don't make a real DNS lookup.
 vi.mock('@/fetch/host-policy', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/fetch/host-policy')>()),

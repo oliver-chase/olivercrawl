@@ -188,7 +188,7 @@ describe('a blocked host skips the wasted fetch next time', () => {
   });
 
   test('a policy refusal does not wipe the memory', async () => {
-    // 'quarantined' is a decision we made, not evidence the host changed.
+    // 'quarantined' is a decision we made and is no evidence the host changed.
     const calls: string[] = [];
     let jinaBody = JINA_BODY;
     globalThis.fetch = (async (input: RequestInfo | URL) => {

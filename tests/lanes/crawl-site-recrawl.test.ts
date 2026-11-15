@@ -48,7 +48,7 @@ describe('crawlSite — unchanged-content detection (CRAWL-UNCHANGED-1)', () => 
     expect(second.pages).toHaveLength(1); // still fetched — only the origin can prevent that
   });
 
-  test('a real content change is NOT flagged unchanged', async () => {
+  test('a real content change is not flagged unchanged', async () => {
     let call = 0;
     globalThis.fetch = (async () => {
       call++;
@@ -128,7 +128,7 @@ describe('crawlSite — hash comparability across rungs (CRAWL-HASH-1)', () => {
   // the extracted TEXT, which is not comparable with the HTML-derived
   // structural hash. A page fetched normally one run and via Jina the next
   // would report a false content change.
-  test('same content via different rungs is NOT reported as changed', async () => {
+  test('same content via different rungs is not reported as changed', async () => {
     const copy = 'Identical event copy across rungs. '.repeat(8).trim();
     const body = `<html><head><title>T</title></head><body><main>${copy}</main></body></html>`;
 
@@ -160,9 +160,9 @@ describe('crawlSite — hash comparability across rungs (CRAWL-HASH-1)', () => {
     });
 
     expect(second.pages[0]!.rung).toBe('jina');
-    // Structural hash is empty on this rung — honest, not a lookalike.
+    // Structural hash is empty on this rung — an honest empty value.
     expect(second.validators['https://venue.example.com/events']!.contentRegionSha256).toBe('');
-    // And it must NOT have been compared against the structural hash.
+    // And it must not have been compared against the structural hash.
     expect(second.pages[0]!.textSha256).toBeTruthy();
     // The same text through another rung is unchanged.
     expect(second.unchanged).toEqual(['https://venue.example.com/events']);

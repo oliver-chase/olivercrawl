@@ -138,8 +138,8 @@ export async function evaluateRobotsForUrl(
     // Being stricter than the standard here costs data and protects nobody: a
     // site that has not published a robots.txt has not expressed a restriction.
     //
-    // 429 is deliberately excluded. It means rate limited, not unavailable,
-    // and reading it as permission is how a temporary block becomes a ban.
+    // 429 is deliberately excluded. It means rate limited, and reading it as
+    // permission is how a temporary block becomes a ban.
     if (res.status >= 400 && res.status < 500 && res.status !== 429) {
       return {
         policy: 'allow',

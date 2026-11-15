@@ -1,6 +1,6 @@
 // ─── PDF text extraction (optional peer) ────────────────────────────────────
 //
-// CRAWL-PDF-1: the parser is an OPTIONAL peer, not a dependency. It is a large
+// CRAWL-PDF-1: the parser is an OPTIONAL peer. It is a large
 // amount of parsing code over hostile input, and putting that in every
 // consumer's install — including the majority who never crawl a PDF — is the
 // wrong trade for a library whose value is screening what it fetches.
@@ -75,7 +75,7 @@ export async function extractPdfText(bytes: Uint8Array): Promise<PdfExtractResul
       return {
         ok: false,
         reason: 'unreadable',
-        detail: 'PDF has no text layer (likely scanned images) — it needs a vision model, not a parser.',
+        detail: 'PDF has no text layer (likely scanned images) — it needs a vision model.',
       };
     }
 

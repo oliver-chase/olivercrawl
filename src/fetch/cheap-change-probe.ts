@@ -34,7 +34,7 @@ export type CheapChangeSignal = {
 
 const PROBE_TIMEOUT_MS = 8_000;
 const PROBE_MAX_REDIRECTS = 4;
-const PROBE_MAX_BODY_BYTES = 200_000; // enough to hash a shell page, not a full render
+const PROBE_MAX_BODY_BYTES = 200_000; // enough to hash a shell page
 
 /**
  * A plain, unauthenticated, bounded GET — never routed through the paid

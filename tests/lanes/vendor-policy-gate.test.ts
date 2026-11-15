@@ -101,8 +101,8 @@ describe('a vendor page carries markdown', () => {
   // their text IS markdown and belongs in both fields. A refactor that routed
   // every text rung through one constructor silently dropped it, and nothing
   // caught that — markdown is the field callers are told to feed a model, so
-  // the loss would have surfaced as worse extraction, not as an error.
-  test('markdown is populated, not empty', async () => {
+  // the loss would have surfaced as worse extraction with no error.
+  test('markdown is populated', async () => {
     vendorStub();
     const target: CrawlTarget = { baseUrl: 'https://venue.example.com', robotsPolicy: 'allow', active: true };
     const result = await crawler().crawl(target, 'https://venue.example.com/events', { lanes: ['vendor'] });

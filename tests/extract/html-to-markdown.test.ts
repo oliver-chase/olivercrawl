@@ -2,7 +2,7 @@ import { describe, expect, test } from 'vitest';
 import * as cheerio from 'cheerio';
 import { htmlToMarkdown } from '@/extract/html-to-markdown';
 
-// VENDOR-PARITY-1: markdown is an accuracy lever, not a format preference.
+// VENDOR-PARITY-1: markdown is an accuracy lever.
 // Each case below is structure an extractor needs that plain text destroys.
 
 const md = (html: string) => htmlToMarkdown(cheerio.load(html), { baseUrl: 'https://venue.example/' });
@@ -124,7 +124,7 @@ describe('does not corrupt the surrounding crawl', () => {
     expect($('a[href="/calendar"]').length).toBe(1);
   });
 
-  test('markdown syntax in page text is escaped, not executed', () => {
+  test('markdown syntax in page text is escaped and never executed', () => {
     expect(md('<main><p>Rated 5*stars* and [bracketed]</p></main>')).toContain('\\*');
   });
 
@@ -140,7 +140,7 @@ describe('does not corrupt the surrounding crawl', () => {
     expect(out.length).toBeLessThan(200);
   });
 
-  test('an empty page yields an empty string, not a throw', () => {
+  test('an empty page yields an empty string and never a throw', () => {
     expect(md('<body></body>')).toBe('');
   });
 });

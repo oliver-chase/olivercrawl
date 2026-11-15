@@ -41,7 +41,7 @@ export async function renderChecks() {
         const r = await renderCrawler.crawl(IANA, 'https://www.iana.org/help/example-domains');
         assert(r.ok, `${r.reason}: ${r.detail}`);
         const page = r.pages[0];
-        assert(page.rung === 'local-render', `escalated to ${page.rung}, not local-render`);
+        assert(page.rung === 'local-render', `escalated to ${page.rung}, expected local-render`);
         assert(page.text.length > 0, 'rendered page had no text');
         return `${page.text.length} chars`;
       });
@@ -57,7 +57,7 @@ export async function renderChecks() {
         // HTML-derived rung satisfied the body, so it asserted the shape of a
         // page the render rung never produced. Same vacuous-shape defect as the
         // unit test this replaced, reintroduced in its replacement.
-        assert(page.rung === 'local-render', `shape checked on ${page.rung}, not local-render`);
+        assert(page.rung === 'local-render', `shape checked on ${page.rung}, expected local-render`);
         assert(/^[a-f0-9]{64}$/.test(page.textSha256), 'textSha256 missing — change detection would be dead for this rung');
         assert(/^[a-f0-9]{64}$/.test(page.bodySha256), 'bodySha256 missing');
         // Rendered output IS HTML, so the HTML-derived fields must be populated
@@ -98,7 +98,7 @@ export async function renderChecks() {
       });
 
       await check('the render rung reports what it did', async () => {
-        // NOT a test of the refusal itself. Driving a real cross-site redirect
+        // The refusal itself is untested here. Driving a real cross-site redirect
         // would need a redirector this suite does not control, so RENDER-HOP-1
         // and RENDER-SUBRESOURCE-1 are proven in tests/fetch/render-wiring.test.ts
         // against a stubbed browser instead.

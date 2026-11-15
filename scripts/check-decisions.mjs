@@ -23,7 +23,7 @@ const SELF = relative(process.cwd(), resolve(process.argv[1] ?? ''));
 // AREA-TOPIC-N: three segments, so at least two
 // dashes. An earlier cut made the middle segment optional and matched every
 // two-segment label — BUG-9, BC-1, EPIC-2, US-SDR-202 — which are
-// test cases and user stories, not decision records. That noise was worked
+// test cases and user stories, which are no decision records. That noise was worked
 // around with exclusion lists before the pattern itself was the problem.
 const ID_PATTERN = /\b[A-Z][A-Z0-9]+(?:-[A-Z0-9]{2,})+-\d+[a-z]?\b/g;
 
@@ -37,7 +37,7 @@ const DEFAULTS = {
   // as records produces noise that trains a reader to ignore the gate.
   notDecisions: ['ISO-8859-1', 'ISO-8859-15', 'UTF-8', 'RFC-9309'],
   // A whole AREA that never names decisions. User stories (US-TSK-118,
-  // US-SDR-202) match the id shape exactly and are work items, not records —
+  // US-SDR-202) match the id shape exactly and are work items and need no record —
   // demanding a ledger row for each would fill the ledger with the backlog.
   // Listing the area, with no ids, means a new story needs no config edit.
   notDecisionAreas: ['US'],

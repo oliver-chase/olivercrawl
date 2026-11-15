@@ -31,7 +31,7 @@ const PROMPT_INJECTION_PATTERNS: PromptInjectionPattern[] = [
     // GUARD-PRECISION-2: missed "disregard YOUR prior instructions" — the
     // optional qualifier group had no slot for a determiner/possessive, so
     // any word between the verb and the noun broke the match. Attackers
-    // phrase this naturally, not in a fixed template.
+    // phrase this naturally, in no fixed template.
     source:
       String.raw`(?:ignore|disregard|forget|override)\s+(?:(?:all|your|the|my|these|those|any)\s+)*(?:(?:previous|prior|system|developer|initial|original|above|earlier)\s+)*(?:instructions?|rules?|directives?|prompts?)`,
   },
@@ -73,7 +73,7 @@ const PROMPT_INJECTION_PATTERNS: PromptInjectionPattern[] = [
     // destination, while `exfiltrate` stays unconditional — legitimate copy
     // essentially never uses that word.
     //
-    // GUARD-PRECISION-4: the destination may be a MAILBOX, not only a bare
+    // GUARD-PRECISION-4: the destination may be a MAILBOX as well as a bare
     // host. An instruction to send a key "to" a mailbox at an attacker
     // domain was missed entirely, because the destination clause cannot match
     // across the at-sign. The literal strings live in the test file, which the

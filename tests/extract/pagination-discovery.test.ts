@@ -28,7 +28,7 @@ describe('findNextPageUrl', () => {
     expect(findNextPageUrl(html, 'https://site.example.com/events')).toBe('https://site.example.com/events?page=2');
   });
 
-  test('does NOT match a real event whose title happens to contain "Next" (the false-positive risk)', () => {
+  test('does not match a real event whose title happens to contain "Next" (the false-positive risk)', () => {
     const html = '<a href="/events/example-comedy-night">Example Comedy Night</a>';
     expect(findNextPageUrl(html, 'https://site.example.com/events')).toBeNull();
   });
@@ -37,7 +37,7 @@ describe('findNextPageUrl', () => {
   // data-rel (a hyphen is a word boundary too) — a real pattern from
   // carousel/slider JS plugins ("next slide"), wholly unrelated to page-level
   // pagination.
-  test('does NOT mistake data-rel="next" (a carousel "next slide" control) for real pagination', () => {
+  test('does not mistake data-rel="next" (a carousel "next slide" control) for real pagination', () => {
     const html = '<a data-rel="next" class="carousel-control" href="/gallery/photo-2">Next photo</a>';
     expect(findNextPageUrl(html, 'https://site.example.com/events')).toBeNull();
   });
@@ -93,7 +93,7 @@ describe('discoverPaginatedUrls', () => {
     expect(urls).toEqual([]); // page 1's own "next" link points back at itself
   });
 
-  test('no pagination link on the seed page: empty, not an error', async () => {
+  test('no pagination link on the seed page: empty without an error', async () => {
     const fetchImpl = (async () => new Response('<p>single page, no pagination</p>', { status: 200 })) as unknown as typeof fetch;
     expect(await discoverPaginatedUrls('https://site.example.com/events', { fetchImpl })).toEqual([]);
   });

@@ -64,7 +64,7 @@ describe('fetchViaWayback — called directly', () => {
     expect(r.capturedAt).toBe('2026-06-01T12:00:00Z');
   });
 
-  test('no capture is an answer, not a throw', async () => {
+  test('no capture is an answer and never a throw', async () => {
     globalThis.fetch = (async () => new Response(JSON.stringify([['timestamp', 'original']]), { status: 200 })) as typeof fetch;
     const r = await fetchViaWayback('https://site.example.com/a');
     expect(r.ok).toBe(false);
@@ -82,7 +82,7 @@ describe('fetchViaWayback — called directly', () => {
     expect(called).toBe(false);
   });
 
-  test('an archive outage is an answer, not a throw', async () => {
+  test('an archive outage is an answer and never a throw', async () => {
     globalThis.fetch = (async () => {
       throw new Error('ENOTFOUND');
     }) as typeof fetch;

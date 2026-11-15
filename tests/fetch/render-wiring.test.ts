@@ -30,7 +30,7 @@ describe('the landing guard stays wired into the render path', () => {
     expect(calls.length).toBeGreaterThanOrEqual(2);
   });
 
-  test('every navigation hop is intercepted, not just the landing', () => {
+  test('every navigation hop is intercepted, the landing included', () => {
     expect(renderFn).toMatch(/page\.route\(/);
     expect(renderFn).toMatch(/isNavigationRequest\(\)/);
     expect(renderFn).toMatch(/route\.abort\(\)/);
@@ -51,7 +51,7 @@ describe('subresource requests are screened too', () => {
     expect(renderFn).toMatch(/assertHostResolvesToPublicAddress\(new URL\(hopUrl\)\.hostname/);
   });
 
-  test('a blocked subresource aborts the request, not the render', () => {
+  test('a blocked subresource aborts the request and leaves the render running', () => {
     // A blocked tracker or internal beacon must not lose the page.
     //
     // The slice covers the subresource branch alone, so the navigation branch's

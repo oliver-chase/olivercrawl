@@ -1,6 +1,6 @@
 // ─── HTML to Markdown ───────────────────────────────────────────────────────
 //
-// VENDOR-PARITY-1: markdown is an ACCURACY lever, not a format choice. Plain
+// VENDOR-PARITY-1: markdown is an ACCURACY lever. Plain
 // text flattens a schedule table into unlabelled tokens; markdown keeps the
 // columns, headings and link targets the page's author already encoded, which
 // is the difference between an extractor reading and guessing.
@@ -156,7 +156,7 @@ function renderNode($: CheerioAPI, $el: Cheerio<AnyNode>, el: AnyNode, blocks: s
 
     case 'div':
     case 'section': {
-      // A div is a layout box, not a semantic block, so recurse: nested headings, lists and tables
+      // A div is a layout box with no semantic meaning, so recurse: nested headings, lists and tables
       // are still recognised and stay unflattened.
       renderChildren($, $el, blocks, ctx);
       return;
@@ -212,7 +212,7 @@ function renderNode($: CheerioAPI, $el: Cheerio<AnyNode>, el: AnyNode, blocks: s
     }
 
     case 'img': {
-      // A block-level image, not wrapped in a paragraph. Common for flyers,
+      // A block-level image outside any paragraph. Common for flyers,
       // and its alt text is often the only description of the event — the
       // default branch would recurse into a childless node and emit nothing.
       const rendered = inlineImage($, $el);
@@ -388,7 +388,7 @@ function renderTable($: CheerioAPI, $table: Cheerio<AnyNode>): string {
     return `| ${filled.join(' | ')} |`;
   };
 
-  // A single-row table is a layout hack, not data — emit it as a plain line
+  // A single-row table is a layout hack — emit it as a plain line
   // so it does not masquerade as a headerless table.
   if (rows.length === 1) return rows[0]!.filter(Boolean).join(' ');
 

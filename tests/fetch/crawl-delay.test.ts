@@ -21,7 +21,7 @@ describe('Crawl-delay is read from robots.txt', () => {
     expect(parseRobots(robots, 'mybot', '/').crawlDelayMs).toBe(2000);
   });
 
-  test('no Crawl-delay yields null, not zero', () => {
+  test('no Crawl-delay yields null', () => {
     // null means "the site said nothing"; 0 would mean "the site said go fast".
     expect(parseRobots('User-agent: *\nAllow: /', 'mybot', '/').crawlDelayMs).toBeNull();
   });

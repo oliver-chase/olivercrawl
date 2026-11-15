@@ -1,4 +1,4 @@
-// ─── SPA content recovery: read the data model, not just the shell ─────────
+// ─── SPA content recovery: read the data model behind the shell ─────────
 //
 // Site builders (Duda, Wix, Squarespace, Next/Nuxt) render a near-empty
 // <body> and ship the actual page content as JSON inside inline <script>

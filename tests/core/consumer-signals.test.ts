@@ -45,7 +45,7 @@ describe('failure classification', () => {
     expect(classifyFailure('empty', 'No visible text in the served HTML')).toBe('transient');
   });
 
-  test('a missing optional parser is structural — it needs an install, not a wait', () => {
+  test('a missing optional parser is structural — it needs an install', () => {
     expect(
       classifyFailure('empty', 'PDF support needs the optional `unpdf` package. Run `npm install unpdf` to enable it.'),
     ).toBe('structural');
@@ -82,7 +82,7 @@ describe('empty-state detection', () => {
     expect(looksLikeEmptyState('   ')).toBe(true);
   });
 
-  test('a real listing is NOT flagged', () => {
+  test('a real listing is not flagged', () => {
     expect(
       looksLikeEmptyState(
         'The outdoor concert series runs every Friday evening at the riverside stage. ' +
@@ -91,7 +91,7 @@ describe('empty-state detection', () => {
     ).toBe(false);
   });
 
-  test('a long page mentioning "coming soon" in passing is NOT flagged', () => {
+  test('a long page mentioning "coming soon" in passing is not flagged', () => {
     // The signal is an empty-state phrase AND nothing else on the page.
     const long =
       'Our autumn programme is now open for booking with a full slate of touring acts. '.repeat(10) +
@@ -150,7 +150,7 @@ describe('user-agent contact warning', () => {
     expect(warn).not.toHaveBeenCalled();
   });
 
-  test('warns once per user agent, not once per crawler', () => {
+  test('warns once per user agent', () => {
     // A 500-page run must not print 500 warnings.
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     resolveConfig({ userAgent: 'AnonymousBot/1.0' });

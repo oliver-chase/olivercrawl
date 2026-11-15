@@ -23,7 +23,7 @@ describe('4xx means unavailable, which permits crawling (RFC 9309)', () => {
     expect(r.policy).toBe('allow');
   });
 
-  test('429 is the exception — rate limited, not unavailable', async () => {
+  test('429 is the exception — rate limited, never unavailable', async () => {
     // Treating a rate limit as permission is how a crawler turns a temporary
     // block into a ban.
     robotsStatus(429);
@@ -33,7 +33,7 @@ describe('4xx means unavailable, which permits crawling (RFC 9309)', () => {
 });
 
 describe('5xx and transport failures still fail closed', () => {
-  test.each([500, 502, 503])('%i does NOT permit', async (status) => {
+  test.each([500, 502, 503])('%i does not permit', async (status) => {
     robotsStatus(status);
     const r = await check();
     expect(r.policy).toBe('unknown');

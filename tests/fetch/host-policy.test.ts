@@ -67,7 +67,7 @@ describe('assertHostResolvesToPublicAddress — DNS rebinding defence', () => {
 
   // A multi-record answer where only ONE entry is internal must still be
   // rejected — checking just the first record would be exploitable.
-  test('blocks when ANY returned record is private, not just the first', async () => {
+  test('blocks when ANY returned record is private', async () => {
     const lookup = async () => [
       { address: '93.184.216.34', family: 4 },
       { address: '10.1.2.3', family: 4 },
@@ -185,7 +185,7 @@ describe('assertRequestUrlAllowed — same-site enforcement', () => {
     expect(() => assertRequestUrlAllowed(source, 'https://evil.example.net/events')).toThrow(/off-domain/i);
   });
 
-  // A subdomain is NOT the same site — this is the shape an attacker gets
+  // A subdomain is a different site — this is the shape an attacker gets
   // from a page that links its own CDN/user-content host.
   test('blocks an unrelated subdomain of the same registrable domain', () => {
     expect(() => assertRequestUrlAllowed(source, 'https://uploads.venue.example.com/x')).toThrow(/off-domain/i);
@@ -247,20 +247,20 @@ describe('assertRedirectUrlAllowed / ForHost — redirect following', () => {
 // configuration; its verdicts must not leak across differently-configured
 // instances.
 describe('DNS safe-cache is scoped per resolver', () => {
-  test('a host cleared by one resolver is NOT trusted by another', async () => {
+  test('a host cleared by one resolver is distrusted by another', async () => {
     const permissive = async () => [{ address: '93.184.216.34', family: 4 }];
     const restrictive = async () => [{ address: '127.0.0.1', family: 4 }];
 
     // First resolver says the host is public — cached under ITS namespace.
     await expect(assertHostResolvesToPublicAddress('shared-host.example.com', permissive)).resolves.toBeUndefined();
 
-    // A different resolver must still get its own verdict, not the cached one.
+    // A different resolver must still get its own verdict.
     await expect(assertHostResolvesToPublicAddress('shared-host.example.com', restrictive)).rejects.toThrow(
       /private IPv4/i,
     );
   });
 
-  test('the same resolver still caches (one lookup, not two)', async () => {
+  test('the same resolver still caches (one lookup)', async () => {
     let lookups = 0;
     const counting = async () => {
       lookups++;

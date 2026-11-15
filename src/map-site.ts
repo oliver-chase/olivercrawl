@@ -14,7 +14,7 @@
 // which turns `maxPages` into a budget you spend deliberately, where the
 // queue order would otherwise spend it for you.
 //
-// Deliberately NOT a crawl: no recursive link-following, no page content, and no
+// Lists URLs only: no recursive link-following, no page content, and no
 // `maxDepth` because there is no depth. For content, feed the result to crawlSite
 // as `seeds`.
 

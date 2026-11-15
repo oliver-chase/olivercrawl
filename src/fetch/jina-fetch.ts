@@ -70,7 +70,7 @@ export async function fetchViaJina(
     const res = await doFetch(`${endpoint}/${target.toString()}`, {
       method: 'GET',
       headers: {
-        // Ask Jina for the readable content, not the raw DOM.
+        // Ask Jina for the readable content.
         'X-Return-Format': 'text',
         accept: 'text/plain',
       },

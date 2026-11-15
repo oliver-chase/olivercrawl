@@ -10,7 +10,7 @@ import type { CrawlTarget } from '../../core/types.js';
 // CRAWL-ROBOTS-1: robots.txt was ported but nothing ever CALLED it, so a
 // "governed crawler" was only as governed as the consumer's bookkeeping. With
 // config.autoRobots on, an 'unknown' posture is resolved for real and cached per
-// HOST — one robots.txt request per host, not per page.
+// HOST — one robots.txt request per host.
 //
 // ROBOTS-TTL-1: each answer expires, so a long-lived process sees a site add a
 // Disallow, and a transient failure, cached as 'unknown' and failing closed,
@@ -103,7 +103,7 @@ export async function resolveTargetPolicy(target: CrawlTarget, config: ResolvedC
 
 /**
  * VENDOR-POLICY-1: the lane-independent policy gate — eligibility, robots
- * posture, same-site. Governance is a property of the CRAWL, not of which
+ * posture, same-site. Governance is a property of the CRAWL, whichever
  * network makes the request, so `lanes: ['vendor']` is vetted like the own lane.
  *
  * Excludes the DNS-resolves-public check on purpose. That guards OUR socket

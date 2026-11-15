@@ -42,7 +42,7 @@ describe('availableSearchProviders', () => {
 describe('search — outcomes are distinguishable', () => {
   // This returns an outcome and not a bare array because a
   // caller cannot tell these three apart from an empty array.
-  test('no key configured is reported as such, NOT as "no results"', async () => {
+  test('no key configured is reported as such and never as "no results"', async () => {
     const result = await search('anything', resolveConfig({ userAgent: 'T/1' }));
     expect(result).toMatchObject({ ok: false, reason: 'no_provider_configured' });
   });
@@ -146,9 +146,9 @@ describe('search — results', () => {
       serperBody([
         {
           title: 'Long',
-          // Real prose, not a single repeated character: a long run of one
+          // Real prose is needed here: a long run of one
           // letter is degenerate input the injection guard flags on its own,
-          // which would make this test about the guard and not truncation.
+          // which would make this test about the guard and skip truncation.
           snippet: 'The outdoor concert series returns to the riverside stage this Friday evening. '.repeat(20),
           link: 'https://a.example.com/',
         },
@@ -242,7 +242,7 @@ describe('search — provider fallback', () => {
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error('expected results');
     expect(result.provider).toBe('tavily');
-    // The failure is still reported, not swallowed.
+    // The failure is still reported.
     expect(events.some((e) => e.rung === 'serper' && !e.ok)).toBe(true);
   });
 
@@ -260,10 +260,10 @@ describe('search — provider fallback', () => {
     expect(result.provider).toBe('tavily');
   });
 
-  // SEARCH-DIAG-2: every provider erroring is an OUTAGE, not an empty result
+  // SEARCH-DIAG-2: every provider erroring is an OUTAGE and never an empty result
   // set. Reporting it as 'no_results' hides it behind the one reason a caller
   // is most likely to shrug at.
-  test('all providers erroring reports error, not no_results', async () => {
+  test('all providers erroring reports error and never no_results', async () => {
     globalThis.fetch = (async () => new Response('down', { status: 503 })) as typeof fetch;
     const config = resolveConfig({ userAgent: 'T/1', vendor: { serper: 'serper-key-long', tavily: 'tavily-key-long' } });
     const result = await search('q', config);
@@ -274,7 +274,7 @@ describe('search — provider fallback', () => {
 
   // SEARCH-DIAG-1: when Serper and Tavily both fail, the report names both,
   // because Serper is tried first and is the first thing to fix.
-  test('names every provider that failed, not just the last', async () => {
+  test('names every provider that failed', async () => {
     globalThis.fetch = (async (input: RequestInfo | URL) => {
       const url = String(input);
       if (url.includes('serper')) {

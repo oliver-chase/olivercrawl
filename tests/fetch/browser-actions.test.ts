@@ -3,7 +3,7 @@ import { renderViaLocalChromium, runActions, MAX_ACTIONS } from '@/fetch/local-r
 import type { BrowserAction } from '@/fetch/local-render';
 
 // PARITY-ACTIONS-1: these are instructions driving a real browser on our own
-// infrastructure. Every bound below exists for that reason, not for tidiness.
+// infrastructure. Every bound below exists for that reason.
 
 type Recorded = { kind: string; arg?: string | number };
 
@@ -47,7 +47,7 @@ function fakePage(opts: { urlSequence?: string[]; failClick?: boolean } = {}) {
 const run = (fake: ReturnType<typeof fakePage>, actions: BrowserAction[]) =>
   runActions(fake.page, actions, ORIGIN);
 
-describe('action bounds are enforced by the library, not the caller', () => {
+describe('action bounds are enforced by the library', () => {
   test('no actions means nothing runs', async () => {
     const fake = fakePage();
     await run(fake, []);
@@ -62,7 +62,7 @@ describe('action bounds are enforced by the library, not the caller', () => {
   });
 });
 
-describe('a failing step is skipped, not fatal', () => {
+describe('a failing step is skipped and never fatal', () => {
   test('a missing "Load more" selector does not stop the run', async () => {
     // The normal end state: the button is gone because everything loaded.
     const fake = fakePage({ failClick: true });

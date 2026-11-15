@@ -10,7 +10,7 @@
 //
 //   1. A remembered rung is a STARTING POINT, never a restriction. The full
 //      ladder stays available beneath it, so a wrong memory costs one
-//      request, not a failed crawl.
+//      request and never a failed crawl.
 //   2. Memory expires. A site that stops blocking must not stay pinned to
 //      the expensive rung forever, and blocking is frequently temporary.
 

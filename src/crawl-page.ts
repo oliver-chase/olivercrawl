@@ -84,7 +84,7 @@ export function createPageProcessor(ctx: PageStepContext) {
           visited.add(key);
           return true;
         });
-        // CRAWL-NEARDUP-1: the same content under another URL is reported, not returned again. Its
+        // CRAWL-NEARDUP-1: the same content under another URL is reported and left out of the pages. Its
         // links and validators are still used below, since the page itself was read.
         for (const p of fresh) {
           const twin = nearDuplicates.check(p.url, p.contentSimhash);
@@ -126,7 +126,7 @@ export function createPageProcessor(ctx: PageStepContext) {
         const first = fresh[0];
 
         // Pagination stays at the SAME depth: page 2 of a listing is the same
-        // distance from the seed as page 1, not one hop further.
+        // distance from the seed as page 1.
         if (options.followPagination && first?.html) {
           const next = findNextPageUrl(first.html, url);
           if (next) enqueue(next, depth);

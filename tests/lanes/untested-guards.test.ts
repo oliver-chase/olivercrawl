@@ -8,7 +8,7 @@ import { publicDns } from '../helpers';
 
 const target: CrawlTarget = { baseUrl: 'https://site.example.com', robotsPolicy: 'allow', active: true };
 
-describe('CRAWL-HARDEN-1 — the body cap bounds BYTES, not characters', () => {
+describe('CRAWL-HARDEN-1 — the body cap bounds bytes', () => {
   // The test named for this asserted `text.length <= maxTextChars`, which is
   // the sanitiser's character cap. The 2 MB byte cap that stops a hostile
   // origin exhausting memory had nothing asserting it at all.

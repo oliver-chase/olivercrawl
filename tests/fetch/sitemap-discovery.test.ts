@@ -61,7 +61,7 @@ describe('discoverSitemapUrls', () => {
     expect(result.urls).toEqual(['https://venue.example.com/events/a']);
   });
 
-  test('no sitemap is a normal condition with a reason, not an error', async () => {
+  test('no sitemap is a normal condition with a reason', async () => {
     globalThis.fetch = (async () => new Response('not found', { status: 404 })) as typeof fetch;
     const result = await discoverSitemapUrls(target, { userAgent: 'T/1', dnsLookup: publicDns });
     expect(result.urls).toEqual([]);

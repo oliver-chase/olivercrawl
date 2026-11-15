@@ -45,7 +45,7 @@ export type SitemapDiscoveryResult = {
   /** The same URLs with their `<lastmod>`, for cheap re-crawl skipping. */
   entries: SitemapEntry[];
   /** True when the sitemap listed more than maxUrls — the caller is seeing a
-   *  prefix, not the whole site. */
+   *  prefix of the site. */
   truncated: boolean;
   /** Why urls is empty, when it is. */
   reason: string;
@@ -182,8 +182,7 @@ async function sitemapFromRobots(
 
 /**
  * Discover a target's pages from its sitemap. Returns an empty list (with a
- * reason) and does not throw — no sitemap is a normal condition, not an
- * error.
+ * reason) and does not throw — no sitemap is a normal condition.
  */
 export async function discoverSitemapUrls(
   target: CrawlTarget,
@@ -212,7 +211,7 @@ export async function discoverSitemapUrls(
   const xml = root.xml;
   let readCapped = root.capped;
 
-  // A sitemap INDEX lists child sitemaps, not pages — follow same-site
+  // A sitemap INDEX lists child sitemaps and no pages — follow same-site
   // children (bounded) and collect their pages instead.
   let pageEntries: SitemapEntry[] = [];
   let childrenCapped = false;
@@ -251,7 +250,7 @@ export async function discoverSitemapUrls(
         entries.push({ url: safe, lastmod: entry.lastmod });
       }
     } catch {
-      // off-site or unsafe entry — skip, not an error
+      // off-site or unsafe entry — skip it
     }
   }
   const urls = entries.map((e) => e.url);

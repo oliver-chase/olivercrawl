@@ -6,7 +6,7 @@ import { summarizeStructuredData } from '@/extract/structured-summary';
 // silently extracts nothing.
 
 describe('site furniture is not mistaken for content', () => {
-  test('WebSite + Organization + BreadcrumbList is NOT content', () => {
+  test('WebSite + Organization + BreadcrumbList is no content', () => {
     const summary = summarizeStructuredData([
       { '@type': 'WebSite', name: 'Riverside Venue' },
       { '@type': 'Organization', name: 'Riverside Venue' },
@@ -75,7 +75,7 @@ describe('untrusted input costs bounded work', () => {
     expect(summarizeStructuredData([deep]).nodeCount).toBeLessThanOrEqual(9);
   });
 
-  test('malformed nodes are skipped, not fatal', () => {
+  test('malformed nodes are skipped and never fatal', () => {
     const summary = summarizeStructuredData([null, 'a string', 42, { noType: true }, { '@type': 'Event' }]);
     expect(summary.hasContentData).toBe(true);
     expect(summary.contentTypes).toEqual(['Event']);

@@ -1,6 +1,6 @@
 // ─── Per-host throttle ──────────────────────────────────────────────────────
 //
-// Politeness that actually holds across a whole process, not just within one
+// Politeness that actually holds across a whole process, beyond a single
 // crawl run.
 //
 // crawlSite is sequential and can pause between pages, but that only governs

@@ -11,7 +11,7 @@
 // URL's literal hostname is not enough, because an attacker controls DNS for
 // a host they own and can point `totally-normal.example.com` at 127.0.0.1 or
 // 169.254.169.254 (cloud instance metadata). So resolution is checked, every
-// returned record is checked (not just the first), and the answer is cached
+// returned record is checked, and the answer is cached
 // only on SUCCESS — a transient resolver failure must not be able to poison
 // a host permanently.
 
@@ -21,7 +21,7 @@ import type { CrawlTarget, DnsAddress, DnsLookupFn } from '../core/types.js';
 type ValidatedBaseUrl = { url: URL; host: string; port: string };
 
 /** Default DoH resolver. Overridable via config.dohEndpoint — see the note
- *  there on why this is a real choice, not an implementation detail. */
+ *  there on why this is a real choice. */
 export const DEFAULT_DOH_ENDPOINT = 'https://cloudflare-dns.com/dns-query';
 
 /**
@@ -266,7 +266,7 @@ export function assertTargetEligible(target: CrawlTarget): void {
 // This is the single most common in-page link and redirect shape
 // (example.com <-> www.example.com); treating them as different hosts breaks
 // crawling a site with its own links. Nothing broader is allowed — a subdomain
-// is NOT the same site.
+// is a different site.
 export function hostsMatchAllowingWww(a: string, b: string): boolean {
   const norm = (host: string) => host.toLowerCase().replace(/^www\./, '');
   return a.toLowerCase() === b.toLowerCase() || norm(a) === norm(b);

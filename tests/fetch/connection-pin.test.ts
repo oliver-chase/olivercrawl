@@ -26,7 +26,7 @@ afterEach(() => {
 });
 
 describe('connections go to approved addresses', () => {
-  test('an approved host connects to its approved address, not a later private answer', async () => {
+  test('an approved host connects to its approved address and ignores a later private answer', async () => {
     await assertHostResolvesToPublicAddress('pin.example.com', publicDns);
     const result = await lookup(privateDns);
     expect(result.error).toBeNull();

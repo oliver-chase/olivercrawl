@@ -24,7 +24,7 @@ describe('urlDedupKey — collapses spellings of one resource', () => {
 
 describe('urlDedupKey — never merges genuinely different resources', () => {
   // A wrong merge means a real page is never crawled, and its absence is
-  // invisible. These are the cases that must NOT collapse.
+  // invisible. These are the cases that must stay separate.
   const distinct: Array<[string, string, string]> = [
     ['different path', 'https://site.example.com/events', 'https://site.example.com/calendar'],
     ['different host', 'https://a.com/events', 'https://b.com/events'],
@@ -32,7 +32,7 @@ describe('urlDedupKey — never merges genuinely different resources', () => {
     ['non-default port', 'https://site.example.com:8080/events', 'https://site.example.com/events'],
     ['meaningful param value', 'https://site.example.com/cal?month=7', 'https://site.example.com/cal?month=8'],
     ['param presence', 'https://site.example.com/cal', 'https://site.example.com/cal?month=8'],
-    // Ambiguous params some CMSs really route on — deliberately NOT stripped.
+    // Ambiguous params some CMSs really route on — deliberately kept.
     ['ref param', 'https://site.example.com/e', 'https://site.example.com/e?ref=nav'],
     ['source param', 'https://site.example.com/e', 'https://site.example.com/e?source=partner'],
     ['deep path vs trailing segment', 'https://site.example.com/a/b', 'https://site.example.com/a'],

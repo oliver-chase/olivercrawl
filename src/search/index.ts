@@ -83,7 +83,7 @@ type SearchProvider = {
  * snippet usually being the target page's own meta description. Crawled page text
  * always went through the injection guard but these did not, so an identical
  * payload was blocked when we fetched the page and waved through when a search
- * engine quoted it — the shorter path to the model, not the longer one.
+ * engine quoted it — the shorter path to the model.
  *
  * A tripped snippet drops the prose but KEEPS the url, which is separately
  * validated and still useful. Discarding a real result because its meta

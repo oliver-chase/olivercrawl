@@ -64,7 +64,7 @@ describe('a rendered block page does not end the ladder', () => {
     expect(result.pages[0]!.text).not.toContain('blocked');
   });
 
-  test('a remote-rendered block page is a rung failure, not content', async () => {
+  test('a remote-rendered block page is a rung failure and never content', async () => {
     globalThis.fetch = (async (input: RequestInfo | URL) => {
       const url = String(input);
       if (url.includes('render.example.com')) {

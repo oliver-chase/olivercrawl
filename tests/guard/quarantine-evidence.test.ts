@@ -35,8 +35,8 @@ describe('a quarantine refusal carries what tripped it', () => {
     expect(result.quarantine!.text.length).toBeGreaterThan(0);
   });
 
-  test('the returned text is SANITIZED, not the live payload', async () => {
-    // A reviewer needs to see what the page said, not be handed a working
+  test('the returned text is SANITIZED and carries no live payload', async () => {
+    // A reviewer needs to see what the page said without being handed a working
     // instruction to paste into a model.
     serveHtml(`<html><head><title>Events</title></head><body><main><p>${PAYLOAD}</p></main></body></html>`);
     const result = await createCrawler({ userAgent: 'T/1 (+https://t.example.com)', dnsLookup: publicDns }).crawl(

@@ -80,7 +80,7 @@ describe('Retry-After compliance', () => {
     expect(result.retryAfterMs).toBeGreaterThan(40_000);
   });
 
-  test('an absurd Retry-After is capped, not obeyed literally', async () => {
+  test('an absurd Retry-After is capped and never obeyed literally', async () => {
     globalThis.fetch = (async (input: RequestInfo | URL) => {
       if (String(input).includes('r.jina.ai')) return new Response('', { status: 500 });
       return new Response('go away', { status: 429, headers: { 'retry-after': '86400' } });

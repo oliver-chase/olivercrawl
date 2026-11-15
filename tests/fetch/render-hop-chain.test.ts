@@ -11,7 +11,7 @@ import { readFileSync } from 'node:fs';
 // the post-goto landing check passed because the chain came home.
 //
 // A guard that is present and correct but never invoked is the failure mode
-// this file exists to prevent, so these assertions are about WIRING, not about
+// this file exists to prevent, so these assertions are about WIRING and say nothing about
 // the guard's logic (that is covered where the guard lives).
 //
 // playwright's import is deliberately invisible to bundlers, so the function
@@ -20,7 +20,7 @@ import { readFileSync } from 'node:fs';
 // without a browser present.
 
 const source = readFileSync(new URL('../../src/fetch/local-render.ts', import.meta.url), 'utf8');
-// Anchored on the comment INSIDE the handler, not on the decision id — the id
+// Anchored on the comment INSIDE the handler and never on the decision id — the id
 // also appears on the type declaration far above, and slicing from there swept
 // in unrelated code. A sibling test in this repo failed exactly that way by
 // slicing to end-of-file and matching the OTHER branch's route.abort().

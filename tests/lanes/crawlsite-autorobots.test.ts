@@ -27,7 +27,7 @@ function stub(robots = 'User-agent: *\nAllow: /') {
 }
 
 describe('crawlSite honours autoRobots', () => {
-  test('a target with no stored policy is crawled, not refused', async () => {
+  test('a target with no stored policy is crawled', async () => {
     stub();
     const crawler = createCrawler({ userAgent: 'T/1 (+https://t.example.com)', dnsLookup: publicDns, autoRobots: true });
     const run = await crawlSite(crawler, target, { followLinks: true, maxDepth: 1, maxPages: 10 });
@@ -48,7 +48,7 @@ describe('crawlSite honours autoRobots', () => {
   });
 
   test('a real Disallow still fails closed', async () => {
-    // autoRobots must resolve the posture, not assume permission.
+    // autoRobots must resolve the posture and never assume permission.
     stub('User-agent: *\nDisallow: /');
     const crawler = createCrawler({ userAgent: 'T/1 (+https://t.example.com)', dnsLookup: publicDns, autoRobots: true });
     const run = await crawlSite(crawler, target, { maxPages: 5 });

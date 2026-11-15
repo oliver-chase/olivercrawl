@@ -23,7 +23,7 @@ function endlessBody(counter: { bytes: number }): Response {
 }
 
 describe('the byte cap counts bytes', () => {
-  test('multi-byte text stops at the cap in bytes, not characters', async () => {
+  test('multi-byte text stops at the cap in bytes', async () => {
     let chunksPulled = 0;
     const chunk = new TextEncoder().encode('€'.repeat(100)); // 300 bytes, 100 characters
     const stream = new ReadableStream<Uint8Array>({

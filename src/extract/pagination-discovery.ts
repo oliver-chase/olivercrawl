@@ -13,7 +13,7 @@
 // same reasoning F1's sitemap fetch already has. A browser-lane source whose
 // "next page" link only exists in the client-rendered DOM (not the raw HTML)
 // simply won't be found here; it fails soft to zero followed pages, same as
-// a source with no pagination at all, not an error. Paying for a render just
+// a source with no pagination at all, with no error. Paying for a render just
 // to DISCOVER a link (before the main crawl even runs) isn't a good trade.
 
 import { pooledFetchFor } from '../fetch/connection-pool.js';
@@ -88,10 +88,10 @@ export function findNextPageUrl(html: string, pageUrl: string): string | null {
 
 /**
  * Walks a seed page's "next page" link up to MAX_ADDITIONAL_PAGES hops,
- * returning the followed page URLs (page 2, page 3 — NOT the seed page
+ * returning the followed page URLs (page 2, page 3, excluding the seed page
  * itself, which is already crawled separately). Stops on: no next link, a
  * fetch failure, or a link that loops back to an already-visited page (a
- * same-site nav quirk, not real pagination). Fail-soft: never throws — a
+ * same-site nav quirk). Fail-soft: never throws — a
  * broken/absent pagination link just means the seed page crawls alone, as
  * it does today.
  */

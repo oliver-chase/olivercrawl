@@ -122,7 +122,7 @@ export type SiteCrawlOptions = CrawlOptions & {
   priorLastmod?: Record<string, string>;
   /**
    * CRAWL-RESUME-1: called after each page, with everything needed to pick
-   * the run back up. Persist it (your storage, not ours) and pass the last
+   * the run back up. Persist it (in your storage) and pass the last
    * snapshot as `resumeFrom` to continue.
    *
    * Without this, a 500-page crawl killed at page 400 restarts from zero —
@@ -134,8 +134,8 @@ export type SiteCrawlOptions = CrawlOptions & {
    * honoured, so pages already collected are not fetched again, and its
    * queue replaces the seeds.
    *
-   * The pages themselves are NOT carried over — you already persisted those
-   * when you received them. This resumes the WORK, not the results.
+   * The pages themselves are not carried over, since you already persisted those
+   * when you received them. Only the WORK resumes.
    */
   resumeFrom?: CrawlProgress;
 
@@ -184,7 +184,7 @@ export type HostStats = {
 export type SiteCrawlResult = {
   /** Pages successfully fetched and parsed. */
   pages: CrawlPage[];
-  /** URLs the origin answered 304 for — unchanged, and correctly NOT failures. */
+  /** URLs the origin answered 304 for — unchanged, so they stay out of `failures`. */
   notModified: string[];
   /** Per-URL failures. A run with some pages and some failures is normal. */
   failures: SiteCrawlFailure[];

@@ -17,7 +17,7 @@
 // coupled to any particular consumer's extractor — this library must not
 // import any consumer, or anything downstream.
 //
-// The output is intentionally boring: counts and hashes, not prose. Those are
+// The output is intentionally boring: counts and hashes only, with no prose. Those are
 // what a diff can compare without a human reading every page.
 
 import { readFileSync } from 'node:fs';
@@ -81,7 +81,7 @@ for (const url of urls) {
     ok: true,
     rung: page.rung,
     contentKind: page.contentKind,
-    // Lengths and counts, not content: a diff over these is readable, and a
+    // Lengths and counts only: a diff over these is readable, and a
     // diff over full page text is not.
     textChars: page.text.length,
     markdownChars: page.markdown.length,

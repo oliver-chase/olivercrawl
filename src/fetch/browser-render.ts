@@ -2,7 +2,7 @@
 //
 // Renders a JS-only page through a browser service and returns its HTML.
 //
-// This sits in the OWN lane, not the vendor lane, on purpose: the endpoint is
+// This sits in the OWN lane on purpose: the endpoint is
 // yours. Point it at a browserless/Playwright container you run and it costs
 // no per-call vendor fee — which is exactly the distinction the two lanes
 // encode (lane 1 = infrastructure you control, lane 2 = someone's API you are
@@ -86,11 +86,11 @@ export async function renderViaService(targetUrl: string, config: ResolvedConfig
   // content under the requested URL, which is how a sold or parked domain
   // returns the new owner's page as a success.
   //
-  // Checked HERE, not at the call site: a caller that forgets is the
+  // Checked HERE, inside the rung: a caller that forgets is the
   // failure mode, and this is the only place the service's answer enters.
   const landed = data.url || targetUrl;
   const requested = new URL(targetUrl);
-  // The SAME-SITE policy check, not the DNS one. This rung never dials the
+  // The SAME-SITE policy check, with no DNS check. This rung never dials the
   // landing host — the render service did — so resolving it here would add
   // network I/O to learn about a connection we do not make, and it broke tests
   // that legitimately stub no resolver. What this rung CAN know is whether the

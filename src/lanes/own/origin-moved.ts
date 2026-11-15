@@ -19,18 +19,18 @@ function registrableHost(host: string): string {
 /**
  * Did the direct rung refuse because the origin moved to a DIFFERENT SITE?
  *
- * Decided from the URL in the refusal, not from how the guard worded it. The
+ * Decided from the URL in the refusal, whatever wording the guard used. The
  * first version matched `Blocked off-domain ... URL`, and the guard checks
  * https and credentials BEFORE off-domain — so a redirect to plain http is
  * refused as "non-https" and the word never appears. Parked domains routinely
  * 301 to http, which is the case this exists for.
  *
- * Registrable-domain comparison, so `site.com` -> `events.site.com` is NOT a
- * move: same publisher, and flagging it adds review load for a non-event.
+ * Registrable-domain comparison, so `site.com` -> `events.site.com` counts as
+ * the same site: same publisher, and flagging it adds review load for a non-event.
  *
- * Tested through the ladder in `tests/lanes/origin-moved.test.ts`, not against
- * a restatement of the rule — an earlier version asserted a duplicated copy of
- * the regex, so rewriting the detector left it green.
+ * Tested through the ladder in `tests/lanes/origin-moved.test.ts`. An earlier
+ * version asserted a duplicated copy of the regex, so rewriting the detector
+ * left it green.
  */
 export function isOffDomainRefusal(detail: string, requestedUrl: string): boolean {
   const found = detail.match(/https?:\/\/[^\s)]+/);
@@ -44,12 +44,12 @@ export function isOffDomainRefusal(detail: string, requestedUrl: string): boolea
 
 /**
  * Attach ORIGIN-MOVED-1 to any rung that served a page past an off-domain
- * refusal — not just Jina.
+ * refusal, Jina or otherwise.
  *
  * The first version wrapped the Jina branch only, and `renderFallback` runs
  * BEFORE it: on any deployment with `browserRender` configured, the render rung
  * won and the flag was unreachable. The archive rung had the same gap. The
- * signal has to live where the ladder decides, not on one branch of it.
+ * signal has to live where the ladder decides.
  */
 export function withOriginMoved(result: CrawlResult, priorDetail: string, servedBy: string, requestedUrl: string): CrawlResult {
   if (!result.ok || result.notModified) return result;

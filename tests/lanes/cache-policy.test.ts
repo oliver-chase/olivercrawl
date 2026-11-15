@@ -2,7 +2,7 @@ import { describe, expect, test } from 'vitest';
 import { createCrawler } from '@/index';
 import type { CrawlTarget } from '@/core/types';
 
-// CACHE-POLICY-1: the page cache is keyed on (url, lanes) — NOT on the
+// CACHE-POLICY-1: the page cache is keyed on (url, lanes) and never on the
 // target. If a cache hit is served before policy runs, a second target can
 // read a page it was never allowed to fetch.
 

@@ -11,7 +11,7 @@
 // happens only when the caller explicitly asked for it.
 //
 // docs/LANES.md is the rung table and the reasoning behind the order. Keep it
-// there, not here: `freeFallbackLadder` below is the single definition of the
+// there: `freeFallbackLadder` below is the single definition of the
 // order, and a second copy in this header would drift from it.
 import { classifyContentType, refineKindByUrl } from '../../core/content-kind.js';
 import { extractPdfText } from '../../fetch/pdf-extract.js';
@@ -60,7 +60,7 @@ export async function crawlWithOwnLane(
 
   // Politeness: hold the per-host gap BEFORE the request, after policy has
   // already approved it — no point rate-limiting a fetch we will refuse.
-  // ROBOTS-DELAY-1: the site's own Crawl-delay is a FLOOR, not a replacement.
+  // ROBOTS-DELAY-1: the site's own Crawl-delay is a FLOOR for the gap.
   // Parsing robots.txt for permission and then ignoring its pacing is taking
   // only the half of the file that suits us — and it is a common way to get
   // blocked by a site that technically allowed you. A caller who configured a
@@ -79,7 +79,7 @@ export async function crawlWithOwnLane(
   // memory is stale — the host may have stopped blocking, in which case the
   // fetch we skipped is exactly what would have worked. So the memory is
   // dropped and the normal ladder runs from the top. Without this, a rung
-  // that goes down while a memory points at it costs the PAGE, not just an
+  // that goes down while a memory points at it costs the PAGE as well as an
   // extra request, and that would make this optimisation a liability.
   // LANE-ONCE-1: when the remembered path fails, its ladder has already tried every later rung, so a failure
   // of the direct fetch that follows returns that result and does not run the ladder a second time.
@@ -167,7 +167,7 @@ export async function crawlWithOwnLane(
   }
   const contentKind = refineKindByUrl(kindRaw, response.url || requestUrl.toString());
 
-  // CRAWL-PDF-1: a PDF is bytes, not text — decoding it as a string first
+  // CRAWL-PDF-1: a PDF is bytes — decoding it as a string first
   // would corrupt it, so it is read and parsed before the text path.
   if (contentKind === 'pdf') {
     // CRAWL-PDF-CAP-1: the same byte cap as the text path, applied before the bytes are parsed.
@@ -312,7 +312,7 @@ export async function crawlWithOwnLane(
   }
 
   // LADDER-QUALITY-1: a bot wall served with HTTP 200. The text exists but it
-  // is the wall, not the page — treat it exactly like the 403 form of the
+  // is the wall — treat it exactly like the 403 form of the
   // same wall and try the rungs that clear it.
   if (looksLikeBlockPage(page.text)) {
     return ladder(url, config, options, started, 'Served a bot-wall interstitial (HTTP 200)', hasCredentials(target), target, true);

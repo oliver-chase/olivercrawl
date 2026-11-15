@@ -65,7 +65,7 @@ export function finish() {
 
 console.log(`\n${'-'.repeat(52)}`);
 console.log(`${passed} passed, ${failed} failed${skipped ? `, ${skipped} skipped` : ''}`);
-if (skipped) console.log('(skips are unavailable third parties — exhausted keys or outages, not code)');
+if (skipped) console.log('(skips are unavailable third parties — exhausted keys or outages, never code)');
 if (failures.length) {
   console.log('\nFailures:');
   for (const f of failures) console.log(`  - ${f}`);

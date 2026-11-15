@@ -44,8 +44,8 @@ await check('follows a real redirect', async () => {
 await check('a binary content-type is refused, never mis-parsed', async () => {
   // Since CRAWL-FEED-1 text-ish documents ARE read, so this asserts the half
   // that must stay refused: HTML-parsing an image produces confident nonsense.
-  // A URL that really exists and really is an image (200 image/png), so this fails on the content-type gate — not on a 404, which
-  // would pass for the wrong reason and prove nothing.
+  // A URL that really exists and really is an image (200 image/png), so this fails on the content-type gate. A 404 would pass
+  // for the wrong reason and prove nothing.
   const r = await crawler.crawl(RFC, 'https://www.rfc-editor.org/favicon.ico');
   assert(!r.ok, `an image URL was accepted: kind=${r.ok ? r.pages[0].contentKind : ''}`);
   assert(r.reason === 'empty', `expected a content-type refusal, got ${r.reason}: ${r.detail}`);
@@ -60,7 +60,7 @@ await check('refuses a private-resolving host (SSRF)', async () => {
     dnsLookup: async () => [{ address: '127.0.0.1', family: 4 }],
   });
   const r = await localCrawler.crawl(IANA, 'https://www.iana.org/about');
-  assert(!r.ok && r.reason === 'blocked', 'a private-resolving host was NOT blocked');
+  assert(!r.ok && r.reason === 'blocked', 'a private-resolving host was not blocked');
   return r.detail.slice(0, 48);
 });
 
@@ -191,8 +191,8 @@ await check('links and outbound hosts are separated correctly', async () => {
 
 await check('markdown preserves real page structure', async () => {
   // VENDOR-PARITY-1: the free lane must produce what a caller would otherwise
-  // pay Firecrawl for. Asserts structure survived, not just that a string came
-  // back — flattened text would still be non-empty.
+  // pay Firecrawl for. Asserts structure survived: flattened text would still be
+  // non-empty.
   const r = await crawler.crawl(RFC, 'https://www.rfc-editor.org/');
   assert(r.ok, r.detail);
   const { markdown, text } = r.pages[0];
@@ -225,7 +225,7 @@ await check('the default resolver reaches a real site', async () => {
 
 await check('structured-data summary reflects a real page', async () => {
   // JSONLD-SIGNAL-1: the field a caller uses to decide whether to pay for an
-  // LLM at all, so it has to be right on real markup, not just fixtures.
+  // LLM at all, so it has to be right on real markup as well as fixtures.
   const r = await crawler.crawl(IANA, 'https://www.iana.org/');
   assert(r.ok, r.detail);
   const s = r.pages[0].structuredData;
@@ -237,7 +237,7 @@ await check('structured-data summary reflects a real page', async () => {
   return `${s.nodeCount} nodes, content=${s.hasContentData}, types=[${s.types.join(',')}]`;
 });
 
-await check('a real non-HTML document is read, not refused', async () => {
+await check('a real non-HTML document is read', async () => {
   // CRAWL-FEED-1: the fetch rung used to refuse anything but html/plain, so
   // a discovered feed could never be fetched. rfc-editor serves .txt.
   const r = await crawler.crawl(RFC, 'https://www.rfc-editor.org/rfc/rfc2616.txt');

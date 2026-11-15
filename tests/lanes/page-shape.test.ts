@@ -80,7 +80,7 @@ function serve(handler: (url: string) => Response) {
 
 const html = (body: string) => new Response(body, { status: 200, headers: { 'content-type': 'text/html; charset=utf-8' } });
 
-describe('GUARD-TELEMETRY-1 reports real values, not just the right types', () => {
+describe('GUARD-TELEMETRY-1 reports real values of the right types', () => {
   // page-shape asserted `typeof` only, so hardcoding redactionCount: 0 and
   // truncated: false — making the HTML lane tell the same lie the text rungs
   // told — left all tests green. A type assertion on a telemetry field proves
@@ -96,7 +96,7 @@ describe('GUARD-TELEMETRY-1 reports real values, not just the right types', () =
     expect(r.pages[0]!.text).toContain('[TRUNCATED]');
   });
 
-  test('an ordinary page reports NOT truncated', async () => {
+  test('an ordinary page reports not truncated', async () => {
     serve(() => html('<html><head><title>Cal</title></head><body><main><p>A short listing for Saturday.</p></main></body></html>'));
     const r = await createCrawler({ userAgent: 'T/1 (+https://t.example.com)', dnsLookup: publicDns }).crawl(
       target, 'https://site.example.com/x',
@@ -106,7 +106,7 @@ describe('GUARD-TELEMETRY-1 reports real values, not just the right types', () =
     expect(r.pages[0]!.redactionCount).toBe(0);
   });
 
-  test('markdown truncation counts, not only text', async () => {
+  test('markdown truncation counts as well as text', async () => {
     // Markdown is capped independently and is the field the README tells
     // consumers to feed a model. A link-heavy page grows markdown past text.
     // Short labels with long targets: the text fits the cap and only the Markdown passes it.
@@ -190,7 +190,7 @@ describe('every rung returns a complete page', () => {
     assertPageShape(r.pages[0]!, { rung: 'archive', lane: 'own', derivedFromHtml: true });
   });
 
-  // local-render and pdf are NOT covered here, and cannot be. Both need a real
+  // local-render and pdf are not covered here, and cannot be. Both need a real
   // browser or a real optional peer driven at a real URL, and the host guard
   // refuses the private addresses a local test server binds to. Asserting the
   // shape of a rung that never ran is the exact failure this file exists to

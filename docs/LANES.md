@@ -24,7 +24,7 @@ It is a ladder of rungs. Each runs only when the ones above it could not finish 
 
 ### When rungs 7–10 engage
 
-The recovery rungs run on **any** failure of the direct fetch, not just one kind:
+The recovery rungs run on **any** failure of the direct fetch, whatever the kind:
 
 - a **network error** (connection reset, DNS failure, timeout)
 - an **HTTP status** the fetch can't use — a 403 bot wall, a 429, a 5xx

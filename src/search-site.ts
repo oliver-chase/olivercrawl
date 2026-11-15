@@ -8,7 +8,7 @@
 // Most platforms expose search over a plain query string: WordPress `/?s=`,
 // Shopify and Squarespace `/search?q=`, and a large tail of custom sites on
 // `/search?q=` or `/search/?query=`. Submitting a query to a site's own search
-// form is ordinary use of a published feature, not scraping around one, so
+// form is ordinary use of a published feature, so
 // this is free and uncontroversial in a way SERP scraping is not.
 //
 // It also reaches pages the crawler otherwise cannot. Link-following finds
@@ -88,8 +88,8 @@ function looksLikeResultLink(text: string, url: string, baseUrl: string): boolea
 }
 
 /**
- * Result links are read from the MAIN CONTENT region, via markdown, not from
- * `page.links`.
+ * Result links are read from the MAIN CONTENT region, via markdown. `page.links` is
+ * not consulted.
  *
  * `page.links` is every link on the page including the site's whole
  * navigation, and a results page carries the same nav as any other. Using it

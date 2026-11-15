@@ -1,4 +1,4 @@
-// ─── What changed, not just that something did ──────────────────────────────
+// ─── What changed within the content ──────────────────────────────
 //
 // BETTER-DIFF-1: `unchanged` is a boolean. A consumer whose
 // listing page gained ONE event re-extracts the whole page — and pays for the
@@ -35,7 +35,7 @@ function toBlocks(content: string): string[] {
 /**
  * Compare two versions of a page's content.
  *
- * Set-based on purpose, not a line-by-line diff: a listing page that inserts a
+ * Set-based on purpose: a listing page that inserts a
  * new event at the top shifts every subsequent line, and a positional diff
  * would report the entire page as changed. What a consumer actually needs is
  * "these blocks are new" — reordering is not a content change.

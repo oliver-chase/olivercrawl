@@ -134,7 +134,7 @@ export async function crawlSite(
   // so with autoRobots the crawl judges robots.txt for that page's own path.
   const resolved = await crawler.resolveTarget(target);
 
-  // Eligibility is a property of the TARGET, not of any one URL — check it
+  // Eligibility is a property of the TARGET — check it
   // once, and report it as a single failure.
   try {
     assertTargetEligible(resolved);
@@ -173,7 +173,7 @@ export async function crawlSite(
   // Dedup across seeds AND everything discovered — a site whose page 2 links
   // back to page 1, or whose nav links every page to every other page, must
   // not loop.
-  // Keyed on the canonical resource identity, not the raw string — see
+  // Keyed on the canonical resource identity — see
   // core/url-dedup-key.ts. /events, /events/, /events#lineup and
   // /events?utm_source=x are one page, and must cost one slot of maxPages.
   const visited = new Set<string>(options.resumeFrom?.visited ?? []);
@@ -218,7 +218,7 @@ export async function crawlSite(
       // published. Only identity is normalised.
       queue.push(safe);
     } catch {
-      // Off-site or unsafe — not an error, just not ours to follow.
+      // Off-site or unsafe: not ours to follow.
     }
   };
 

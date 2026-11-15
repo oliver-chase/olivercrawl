@@ -15,14 +15,14 @@
 // whether an image is worth paying to read, which is a decision they can only
 // make if they know the image exists.
 //
-// This is a RANKING, not a verdict. It never claims an image contains text;
+// This is a RANKING. It never claims an image contains text;
 // it claims these are the ones worth looking at first.
 
 import type { CheerioAPI, Cheerio } from 'cheerio';
 import type { AnyNode } from 'domhandler';
 import { CHROME_SELECTOR, selectMainRegion } from './main-region.js';
 
-/** Filename/path fragments that mark an image as furniture, not content. */
+/** Filename/path fragments that mark an image as furniture. */
 const FURNITURE_PATTERN =
   /(^|[/_-])(logo|icon|favicon|sprite|avatar|badge|banner-ad|advert|pixel|spacer|placeholder|thumb|thumbnail|arrow|bullet|divider|social|facebook|twitter|instagram)([/_.-]|$)/i;
 
@@ -92,7 +92,7 @@ export function findContentImages($: CheerioAPI, pageUrl: string, limit = 3): Co
     // Being in the content region is the strongest single signal: a flyer is
     // published as content, and nav/footer images are furniture by definition.
     if (inRegion.has(img)) score += 10;
-    // Declared large — a poster, not a decoration.
+    // Declared large — a poster.
     if (width >= 600 || height >= 600) score += 5;
     else if (width >= 300 || height >= 300) score += 2;
     // Portrait-ish is flyer-shaped; wide banners usually are not.

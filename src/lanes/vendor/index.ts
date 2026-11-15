@@ -10,7 +10,7 @@
 //   - a missing key disables THAT rung and nothing else
 //   - no keys at all means the lane reports 'no_lane_available' and does not
 //     throw, so "vendor configured" is a runtime fact a consumer can
-//     branch on, not a deployment precondition
+//     branch on
 //   - each paid call is gated on checkBudget() first, so a consumer's own
 //     spend cap is enforced here without this package knowing what a budget is
 //
@@ -96,13 +96,13 @@ const RUNGS: Record<string, VendorRung> = {
 /**
  * Scrape one URL through the vendor lane, trying configured rungs in order.
  *
- * Note what this does NOT do, deliberately: it applies no DNS/SSRF check of
+ * Deliberately, it applies no DNS/SSRF check of
  * its own, because the request is made by the VENDOR from the vendor's own
  * infrastructure — our network is never the one connecting.
  *
  * Same-site, eligibility and robots ARE enforced, lane-independently, by
- * crawl() (VENDOR-POLICY-1) — governance is a property of the crawl, not of
- * which network makes the request. Callers invoking this function directly
+ * crawl() (VENDOR-POLICY-1) — governance is a property of the crawl, whichever
+ * network makes the request. Callers invoking this function directly
  * bypass that gate and take on the vetting themselves.
  */
 export async function crawlWithVendorLane(
@@ -133,7 +133,7 @@ export async function crawlWithVendorLane(
     if (config.checkBudget) {
       const allowed = await config.checkBudget();
       if (!allowed) {
-        // BREAK, not continue: the budget is a GLOBAL cap, so if it refuses
+        // BREAK out of the loop: the budget is a GLOBAL cap, so if it refuses
         // one paid rung it will refuse every other one too. Continuing just
         // re-asked the same question per rung and reported the last rung's
         // name in place of the real reason.
@@ -181,7 +181,7 @@ export async function crawlWithVendorLane(
             title: result.title,
             bodySource: result.text,
             // Both vendor rungs are ASKED for markdown, so the delivered text
-            // already is markdown — same value, not a second conversion.
+            // already is markdown — same value, no second conversion.
             markdown: sanitized.text,
             redactionCount: sanitized.redactionCount,
             truncated: sanitized.truncated,

@@ -27,7 +27,7 @@ export type Crawler = {
   /**
    * Sitemap entries WITH their `<lastmod>` (BETTER-LASTMOD-1). Same request
    * as discoverSeeds — goes through the crawler so it uses the configured
-   * User-Agent and DNS resolver, not a second set.
+   * User-Agent and DNS resolver.
    */
   discoverSeedEntries: (target: CrawlTarget, maxUrls?: number) => Promise<SitemapEntry[]>;
   /**
@@ -43,7 +43,7 @@ export type Crawler = {
   searchProviders: () => string[];
   /** Discover a target's pages from its own /sitemap.xml, using THIS
    *  crawler's User-Agent and DNS resolver. Free. Empty list when the site
-   *  has no sitemap — a normal condition, not an error. */
+   *  has no sitemap, which is a normal condition. */
   discoverSeeds: (target: CrawlTarget, maxUrls?: number) => Promise<string[]>;
 };
 
@@ -144,9 +144,9 @@ export function createCrawler(config: CrawlConfig): Crawler {
             return result;
           }
 
-          // 'blocked' and 'quarantined' are POLICY decisions, not transport
-          // failures — escalating to a vendor would be paying to route around
-          // our own guard, and retrying cannot change the answer.
+          // 'blocked' and 'quarantined' are POLICY decisions. Escalating to a vendor
+          // would be paying to route around our own guard, and retrying
+          // cannot change the answer.
           if (result.reason === 'blocked' || result.reason === 'quarantined') return withClass(result);
 
           last = result;

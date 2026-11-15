@@ -80,7 +80,7 @@ describe('per-host throttle', () => {
     expect(new Set(times).size).toBe(1);
   });
 
-  // CONCURRENT callers must serialise, not all read the same "now" and fire together.
+  // CONCURRENT callers must serialise, each reading its own "now".
   test('concurrent same-host requests are spaced by minHostIntervalMs', async () => {
     const times = await fetchTimes({ minHostIntervalMs: 60 }, sameHost);
     expect(times).toHaveLength(3);

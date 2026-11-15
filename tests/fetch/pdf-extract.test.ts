@@ -4,7 +4,7 @@ import { extractPdfText } from '@/fetch/pdf-extract';
 import type { CrawlTarget } from '@/core/types';
 import { publicDns } from '../helpers';
 
-// CRAWL-PDF-1: the parser is an OPTIONAL peer, not a dependency. A PDF parser
+// CRAWL-PDF-1: the parser is an OPTIONAL peer and no dependency. A PDF parser
 // is a large amount of parsing code over hostile input, and putting that in
 // every consumer's install — including the majority who never crawl a PDF —
 // is the wrong trade for a library whose value is screening what it fetches.
@@ -14,7 +14,7 @@ const target: CrawlTarget = { baseUrl: 'https://example.com', robotsPolicy: 'all
 describe('without the optional parser installed', () => {
   test('reports the missing package by name, actionably', async () => {
     // `unpdf` is not installed in this repo, so this is the real path a
-    // consumer hits — not a simulation of it.
+    // consumer hits, with no simulation of it.
     const result = await extractPdfText(new Uint8Array([0x25, 0x50, 0x44, 0x46]));
 
     expect(result.ok).toBe(false);

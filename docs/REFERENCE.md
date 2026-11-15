@@ -120,7 +120,7 @@ const run = await crawlSite(crawler, target, {
 });
 
 run.pages;        // everything fetched and parsed
-run.notModified;  // URLs that answered 304 — unchanged, and NOT failures
+run.notModified;  // URLs that answered 304 — unchanged, and never failures
 run.failures;     // per-URL, so one bad page never sinks the run
 run.truncated;    // true if it stopped at maxPages with URLs still queued
 ```
@@ -329,7 +329,7 @@ Reads `/sitemap.xml` (following index files one level), filtered to same-site ht
 const crawler = createCrawler({ userAgent: 'MyBot/1.0', autoRobots: true });
 ```
 
-Without this, the crawler trusts the `robotsPolicy` you set on each target (and fails closed on `'unknown'`). With it, an unknown posture is resolved by actually fetching and parsing robots.txt — **cached per host**, so it costs one request per host, not per page. An explicit posture you set is never overridden.
+Without this, the crawler trusts the `robotsPolicy` you set on each target (and fails closed on `'unknown'`). With it, an unknown posture is resolved by actually fetching and parsing robots.txt — **cached per host**, so it costs one request per host regardless of page count. An explicit posture you set is never overridden.
 
 ### Non-HTML documents (feeds, calendars, CSV, JSON)
 

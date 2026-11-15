@@ -71,8 +71,8 @@ export async function readBodyCapped(response: Response, maxBytes: number): Prom
     merged.set(room >= chunk.byteLength ? chunk : chunk.subarray(0, room), offset);
     offset += Math.min(chunk.byteLength, room);
   }
-  // Decode with the origin's declared charset, not a UTF-8 assumption —
-  // see core/charset.ts for why that assumption corrupts data silently.
+  // Decode with the origin's declared charset; core/charset.ts explains why
+  // assuming UTF-8 corrupts data silently.
   return decodeBody(merged, contentType);
 }
 

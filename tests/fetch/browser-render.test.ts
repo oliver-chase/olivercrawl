@@ -6,7 +6,7 @@ import type { CrawlTarget, UsageEvent } from '@/core/types';
 import { publicDns } from '../helpers';
 
 // The browser-render rung. It lives in the OWN lane because the endpoint is
-// infrastructure the consumer controls, not a vendor API — so it must behave
+// infrastructure the consumer controls and is no vendor API — so it must behave
 // like every other own-lane rung: optional, degrading to "skipped" rather
 // than failing, and never able to end a crawl on its own.
 
@@ -131,7 +131,7 @@ describe('own lane — render rung integration', () => {
     expect(result.ok).toBe(true);
     if (!result.ok || result.notModified) throw new Error('expected pages');
     expect(result.pages[0]!.rung).toBe('browser-render');
-    expect(result.pages[0]!.lane).toBe('own'); // our infrastructure, not a vendor
+    expect(result.pages[0]!.lane).toBe('own'); // our infrastructure
     expect(result.pages[0]!.text).toContain('Three real events, after JS.');
   });
 
@@ -157,7 +157,7 @@ describe('own lane — render rung integration', () => {
     expect(result.ok).toBe(true);
     if (!result.ok || result.notModified) throw new Error('expected pages');
     expect(result.pages[0]!.rung).toBe('jina');
-    // The render failure is still REPORTED, not swallowed silently.
+    // The render failure is still REPORTED.
     expect(events.some((e) => e.rung === 'browser-render' && !e.ok)).toBe(true);
   });
 
@@ -187,7 +187,7 @@ describe('local render rung (free) — guards', () => {
   });
 
   test('opted in but playwright absent -> null, degrades silently to the next rung', async () => {
-    // playwright is deliberately NOT a dependency of this package; in this
+    // playwright is deliberately no dependency of this package; in this
     // test env the Function-constructor import fails and the rung must
     // degrade to null, never throw.
     const { renderViaLocalChromium } = await import('@/fetch/local-render');

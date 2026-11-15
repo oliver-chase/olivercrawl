@@ -44,7 +44,7 @@ describe('lastmod is captured and handed back', () => {
 
     expect(run.lastmod['https://venue.example.com/a']).toBe('2026-07-01');
     expect(run.lastmod['https://venue.example.com/b']).toBe('2026-07-02');
-    // No <lastmod> published — absent, not invented.
+    // No <lastmod> published, so the field is absent.
     expect(run.lastmod['https://venue.example.com/c']).toBeUndefined();
     expect(run.skippedByLastmod).toEqual([]);
   });
@@ -62,7 +62,7 @@ describe('unchanged pages are never fetched at all', () => {
       },
     });
 
-    // The saving is the FETCH itself — not a cheaper fetch, no fetch.
+    // The saving is the FETCH itself: no fetch at all.
     expect(fetched).toEqual(['https://venue.example.com/c']);
     expect(run.skippedByLastmod.sort()).toEqual([
       'https://venue.example.com/a',

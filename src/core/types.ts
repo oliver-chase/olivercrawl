@@ -170,7 +170,7 @@ export type CrawlPage = {
    * change how much you should trust a downstream extraction, and neither is
    * recoverable afterwards.
    *
-   * `truncated` means the text hit maxTextChars, not that anything failed.
+   * `truncated` means the text hit maxTextChars; nothing failed.
    */
   redactionCount: number;
   truncated: boolean;
@@ -248,7 +248,7 @@ export type { FailureClass } from './failure-class.js';
 
 export type { StructuredSummary } from '../extract/structured-summary.js';
 
-/** The result of a crawl. Ordinary failure is a value, not an exception. */
+/** The result of a crawl. Ordinary failure is returned as a value. */
 export type CrawlResult =
   | {
       ok: true;
@@ -306,8 +306,8 @@ export type CrawlResult =
        * outcome quarantining exists to prevent. A review task needs the
        * signals and the text to render at all.
        *
-       * The text is SANITIZED, not raw: a reviewer needs to see what the page
-       * said, not to be handed a live payload. Redactions are already applied.
+       * The text is SANITIZED: a reviewer sees what the page said without
+       * receiving a live payload. Redactions are already applied.
        */
       quarantine?: {
         signals: PromptInjectionSignal[];

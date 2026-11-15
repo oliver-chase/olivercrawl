@@ -77,7 +77,7 @@ describe('diffContent', () => {
     expect(diff.added).toEqual([]);
   });
 
-  test('reordering is NOT a content change', () => {
+  test('reordering is no content change', () => {
     // The failure a positional diff has: inserting at the top shifts every
     // line and reports the whole page as changed.
     const before = '- A\n\n- B\n\n- C';
@@ -93,7 +93,7 @@ describe('diffContent', () => {
     expect(diff.removed).toEqual([]);
   });
 
-  test('duplicate blocks are counted, not collapsed', () => {
+  test('duplicate blocks are counted individually', () => {
     const diff = diffContent('- A\n\n- A', '- A\n\n- A\n\n- A');
     expect(diff.added).toEqual(['- A']);
   });

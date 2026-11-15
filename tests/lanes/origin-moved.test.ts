@@ -36,7 +36,7 @@ describe('a page served past an off-domain refusal is flagged', () => {
     expect(result.originMoved!.servedBy).toBe('jina');
   });
 
-  test('an ordinary Jina fallback is NOT flagged', async () => {
+  test('an ordinary Jina fallback is not flagged', async () => {
     // The signal has to mean something. Flagging every Jina page would make a
     // consumer review the whole bot-walled long tail. This was `expect(true)`
     // — a name asserting a guarantee its body never checked.
@@ -109,13 +109,13 @@ describe('a page served past an off-domain refusal is flagged', () => {
     expect(rung).not.toBe('browser-render');
   });
 
-  // The decision reads the URL in the refusal, not its wording, so a parked
+  // The decision reads the URL in the refusal and ignores its wording, so a parked
   // domain that 301s to plain http (refused as "non-https") is still flagged.
   test.each([
     ['off-domain over https', 'https://newowner.example.net/', true],
     ['off-domain over http', 'http://newowner.example.net/', true],
     ['off-domain carrying credentials', 'https://u:p@newowner.example.net/', true],
-    // Same publisher on a subdomain is a routine platform migration, not a
+    // Same publisher on a subdomain is a routine platform migration and no
     // move. Flagging it adds review load for a non-event.
     ['a subdomain of the same site', 'https://events.site.example.com/', false],
     ['a different port on the same host', 'https://site.example.com:8443/', false],

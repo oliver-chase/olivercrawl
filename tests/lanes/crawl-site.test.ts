@@ -61,7 +61,7 @@ describe('crawlSite — seeds', () => {
     expect(result.failures[0]!.reason).toBe('blocked');
   });
 
-  test('an ineligible target fails once, not once per seed', async () => {
+  test('an ineligible target fails once for all seeds', async () => {
     let fetched = false;
     globalThis.fetch = (async () => {
       fetched = true;
@@ -193,7 +193,7 @@ describe('crawlSite — retries', () => {
 
   // Retrying a policy refusal produces the identical refusal — spending the
   // budget on it is pure waste, so it must not be retried at all.
-  test('does NOT retry a terminal (policy) failure', async () => {
+  test('does not retry a terminal (policy) failure', async () => {
     let policyChecks = 0;
     globalThis.fetch = (async () => {
       policyChecks++;
@@ -210,7 +210,7 @@ describe('crawlSite — retries', () => {
     expect(policyChecks).toBe(0);
   });
 
-  test('does NOT retry a structural failure that reached the origin', async () => {
+  test('does not retry a structural failure that reached the origin', async () => {
     let fetches = 0;
     globalThis.fetch = (async (input: RequestInfo | URL) => {
       if (new URL(String(input)).pathname !== '/robots.txt') fetches++;
@@ -315,7 +315,7 @@ describe('crawlSite — pagination', () => {
     expect(result.truncated).toBe(false);
   });
 
-  test('an off-site next link is ignored, not an error', async () => {
+  test('an off-site next link is ignored without an error', async () => {
     globalThis.fetch = (async () => page('One. <a href="https://other.example.net/page/2">Next</a>')) as typeof fetch;
 
     const result = await crawlSite(crawler(), target, {
