@@ -250,7 +250,7 @@ describe('crawlSite — whole-site discovery from one URL (followLinks)', () => 
       maxPages: 20,
     });
 
-    expect(result.pages.length).toBeLessThanOrEqual(3);
+    expect(result.pages.length).toBe(3);
     expect(result.truncated).toBe(false);
   });
 });

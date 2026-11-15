@@ -95,7 +95,18 @@ describe('a PDF is read only up to the cap', () => {
   });
 
   test('a body over the cap fails and does not buffer it all', async () => {
-    await expect(readBytesCapped(stream(50), 5000)).rejects.toThrow(/too large/i);
+    let pulled = 0;
+    const endless = new Response(
+      new ReadableStream({
+        pull(controller) {
+          pulled++;
+          controller.enqueue(new Uint8Array(1000));
+        },
+      }),
+    );
+    await expect(readBytesCapped(endless, 5000)).rejects.toThrow(/too large/i);
+    // 5000 bytes is five chunks, so the read stops within a chunk or two of the cap.
+    expect(pulled).toBeLessThanOrEqual(7);
   });
 });
 

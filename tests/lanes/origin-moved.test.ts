@@ -130,6 +130,7 @@ describe('a page served past an off-domain refusal is flagged', () => {
       target,
       'https://site.example.com/',
     );
+    expect(result.ok).toBe(true);
     const flagged = Boolean(result.ok && !result.notModified && result.originMoved);
     expect(flagged).toBe(expected);
   });
