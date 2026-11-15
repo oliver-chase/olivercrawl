@@ -138,8 +138,8 @@ describe('a page served past an off-domain refusal is flagged', () => {
 
 describe('registrable domains under country-code suffixes', () => {
   test('a move to another .co.uk site is a move', async () => {
-    const { __isOffDomainRefusalForTests } = await import('@/lanes/own/index');
-    expect(__isOffDomainRefusalForTests('Redirected to https://other.co.uk/', 'https://shop.co.uk/page')).toBe(true);
-    expect(__isOffDomainRefusalForTests('Redirected to https://www.shop.co.uk/', 'https://shop.co.uk/page')).toBe(false);
+    const { isOffDomainRefusal } = await import('@/lanes/own/origin-moved');
+    expect(isOffDomainRefusal('Redirected to https://other.co.uk/', 'https://shop.co.uk/page')).toBe(true);
+    expect(isOffDomainRefusal('Redirected to https://www.shop.co.uk/', 'https://shop.co.uk/page')).toBe(false);
   });
 });

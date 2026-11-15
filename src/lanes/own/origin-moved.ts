@@ -16,9 +16,6 @@ function registrableHost(host: string): string {
   return labels.slice(-take).join('.');
 }
 
-/** Test seam. */
-export const __isOffDomainRefusalForTests = (detail: string, requestedUrl: string): boolean => isOffDomainRefusal(detail, requestedUrl);
-
 /**
  * Did the direct rung refuse because the origin moved to a DIFFERENT SITE?
  *

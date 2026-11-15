@@ -30,7 +30,6 @@ import { approveCrawlPolicy, publishedCrawlDelayMs } from './robots-policy.js';
 import { freeFallbackLadder } from './fallback-rungs.js';
 import { hasCredentials, targetHeaders } from './target-headers.js';
 export { ROBOTS_CACHE_TTL_MS, ROBOTS_FAILURE_TTL_MS, publishedCrawlDelayMs, __clearRobotsCacheForTests, resolveTargetPolicy, approveCrawlPolicy } from './robots-policy.js';
-export { __isOffDomainRefusalForTests } from './origin-moved.js';
 
 /** Crawl a single URL with the own lane. */
 export async function crawlWithOwnLane(
@@ -98,8 +97,8 @@ export async function crawlWithOwnLane(
       target,
     );
     if (viaMemory.ok) return viaMemory;
-    // A policy refusal is a decision, not a stale memory — do not re-probe.
-    if (viaMemory.reason === 'blocked' || viaMemory.reason === 'quarantined') return viaMemory;
+    // A quarantined page is a policy decision, so the remembered rung stays and the ladder does not run again.
+    if (viaMemory.reason === 'quarantined') return viaMemory;
     forgetWinningRung(config.rungMemoryStore, requestUrl.hostname);
     spentLadder = viaMemory;
   }
