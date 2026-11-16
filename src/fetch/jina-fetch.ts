@@ -44,11 +44,6 @@ export async function fetchViaJina(
     return null;
   }
 
-  const controller = new AbortController();
-  // TIMEOUT-JINA-1: the caller's timeoutMs binds here like on every rung, since a caller cannot see which
-  // rung is running. The 30s default applies only when the caller sets none, because this rung renders the
-  // page remotely and is legitimately slower than a direct fetch.
-  const timeoutId = setTimeout(() => controller.abort(), opts?.timeoutMs ?? JINA_TIMEOUT_MS);
   try {
     const res = await doFetch(`${endpoint}/${target.toString()}`, {
       method: 'GET',
@@ -57,7 +52,10 @@ export async function fetchViaJina(
         'X-Return-Format': 'text',
         accept: 'text/plain',
       },
-      signal: controller.signal,
+      // TIMEOUT-JINA-1: the caller's timeoutMs binds here like on every rung, since a caller cannot see which
+      // rung is running. The 30s default applies only when the caller sets none, because this rung renders the
+      // page remotely and is legitimately slower than a direct fetch.
+      signal: AbortSignal.timeout(opts?.timeoutMs ?? JINA_TIMEOUT_MS),
     });
     if (!res.ok) {
       dropBody(res);
@@ -67,8 +65,6 @@ export async function fetchViaJina(
     return parseJinaResponse(body);
   } catch {
     return null;
-  } finally {
-    clearTimeout(timeoutId);
   }
 }
 

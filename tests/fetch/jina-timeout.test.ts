@@ -29,18 +29,13 @@ describe('the Jina rung honours the caller timeout', () => {
   });
 
   test('a caller that sets nothing is cut off at the rung default of 30 seconds', async () => {
-    vi.useFakeTimers();
+    // Fake timers do not drive AbortSignal.timeout, so the bound is read where it is set.
+    const timeout = vi.spyOn(AbortSignal, 'timeout');
     const never = ((_url: string, init?: RequestInit) =>
       new Promise((_resolve, reject) => init?.signal?.addEventListener('abort', () => reject(new Error('aborted'))))) as unknown as typeof fetch;
-    let finished = false;
-    const pending = fetchViaJina('https://site.example.com/x', { fetchImpl: never }).then((value) => {
-      finished = true;
-      return value;
-    });
-    await vi.advanceTimersByTimeAsync(29_000);
-    expect(finished).toBe(false);
-    await vi.advanceTimersByTimeAsync(2_000);
-    expect(finished).toBe(true);
+    const pending = fetchViaJina('https://site.example.com/x', { fetchImpl: never });
+    expect(timeout).toHaveBeenCalledWith(30_000);
+    timeout.mock.results[0]!.value.dispatchEvent(new Event('abort'));
     expect(await pending).toBeNull();
   });
 
