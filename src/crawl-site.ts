@@ -13,9 +13,8 @@
 //   - not visiting the same URL twice
 //   - reporting per-URL outcomes without letting one bad page sink the run
 //
-// Sequential by default, parallel on request: the origin implementation ran
-// `maxConcurrency: 1`, and hammering a small venue site with parallel requests
-// is what gets a crawler blocked. `concurrency` raises the global ceiling and
+// Sequential by default, parallel on request: hammering a small venue site with
+// parallel requests is what gets a crawler blocked. `concurrency` raises the global ceiling and
 // `perHostConcurrency` (default 1) keeps each host to one request at a time, so
 // a crawl across many hosts runs in parallel while every host stays polite.
 

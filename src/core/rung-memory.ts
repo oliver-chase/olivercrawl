@@ -1,10 +1,7 @@
 // ─── Remember which rung actually works for a host ──────────────────────────
 //
-// BETTER-RUNGMEMORY-1: every crawl walked the ladder from the
-// top. A host that always 403s the direct fetch and always succeeds on the
-// render rung therefore cost a guaranteed wasted request on every page,
-// forever — and on a 200-page site that is 200 requests spent proving
-// something we already learned on page one.
+// BETTER-RUNGMEMORY-1: a host that always 403s the direct fetch and always
+// succeeds on a later rung skips the wasted direct request on every page.
 //
 // Two rules keep it honest:
 //
@@ -20,13 +17,9 @@ export const RUNG_MEMORY_TTL_MS = 30 * 60 * 1000; // 30 minutes
 type Remembered = { rung: string; expiresAt: number };
 
 /**
- * The store is created PER CRAWLER, never module-level.
- *
- * This is the same lesson as HOST-CACHE-SCOPE-1: a module-level Map shared by
- * every crawler in the process leaks one crawler's observations into another's
- * decisions. A different User-Agent genuinely gets different answers from
- * the same host, so a memory
- * learned under one identity is not evidence about another.
+ * The store is created PER CRAWLER, never module-level: a different User-Agent
+ * gets different answers from the same host, so a memory learned under one
+ * identity is not evidence about another.
  */
 export type RungMemory = Map<string, Remembered>;
 
@@ -37,9 +30,7 @@ export function createRungMemory(): RungMemory {
 /**
  * Record the rung that actually produced a page for this host.
  *
- * Only ever called on SUCCESS. Remembering failures would be the same trap
- * the robots cache had: one bad minute pinning a host into a worse path than
- * it needs.
+ * Only ever called on SUCCESS, so one bad minute never pins a host into a worse path than it needs.
  */
 export function rememberWinningRung(memory: RungMemory, hostname: string, rung: string): void {
   memory.set(hostname.toLowerCase(), { rung, expiresAt: Date.now() + RUNG_MEMORY_TTL_MS });
@@ -63,11 +54,8 @@ export function recallWinningRung(memory: RungMemory, hostname: string): string 
 }
 
 /**
- * Drop a host's memory after the remembered rung failed.
- *
- * A remembered rung that stops working usually means the host CHANGED, so the
- * path we have been skipping may now be the one that works. A stale memory
- * turns this optimisation into a way to lose pages.
+ * Drop a host's memory after the remembered rung failed: the host has usually
+ * changed, so the path being skipped may now be the one that works.
  */
 export function forgetWinningRung(memory: RungMemory, hostname: string): void {
   memory.delete(hostname.toLowerCase());

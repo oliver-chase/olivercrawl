@@ -139,14 +139,9 @@ export async function freeFallbackLadder(
   const viaJina: CrawlResult = liveRungs
     ? await jinaFallback(url, config, options, started, priorDetail)
     : { ok: false, reason: 'unreachable', detail: priorDetail, lane: 'own' };
-  if (viaJina.ok) {
-    // ORIGIN-MOVED-1: this rung stepped past a POLICY refusal of a fetch that
-    // succeeded. Jina follows the same redirect from its own IPs, so a sold or
-    // parked domain returns the new owner's content under the old URL — and
-    // without this the caller sees an ordinary success. The refusal travels
-    // with the page so a consumer can hold it for review.
-    return withOriginMoved(viaJina, priorDetail, 'jina', url);
-  }
+  // Jina follows the same redirect from its own IPs, so a sold or parked domain returns the new owner's
+  // content under the old URL, and the refusal travels with the page.
+  if (viaJina.ok) return withOriginMoved(viaJina, priorDetail, 'jina', url);
 
   // BODY-RECEIVED-1 is attached HERE, outside each rung. A rung knows
   // whether IT got content; only the ladder knows whether the original fetch
@@ -186,15 +181,13 @@ async function renderFallback(
     config.localRender === true,
     config.browserActions ?? [],
     config.dnsLookup,
-    // RENDER-SILENT-1: a security refusal here is the signal an operator needs.
+    // A security refusal here is the signal an operator needs.
     (reason) =>
       emitUsage(config, { lane: 'own', rung: 'local-render', kind: 'render', url, ok: false, latencyMs: Date.now() - started, error: reason }),
   );
   if (localHtml) {
-    // QUARANTINE-TELEMETRY-1: every rung's quarantine is reported once, by quarantined(), under the guard.
-    // LADDER-QUALITY-1: a rendered bot-wall interstitial is a rung FAILURE,
-    // not content. Accepting it here beat the Jina rung, which retrieves the
-    // real page — success reporting a security notice in place of the site.
+    // LADDER-QUALITY-1: a rendered bot-wall interstitial is a rung failure, so the ladder moves on to the
+    // rungs that can retrieve the real page.
     const local = await htmlRungResult(
       config,
       options,
@@ -314,10 +307,6 @@ async function jinaFallback(
       title: jina.title,
       bodySource: jina.text,
     });
-    // QUARANTINE-EVIDENCE-1. This site was MISSED when the decision shipped,
-    // and it is the one that matters most: the Jina rung runs whenever the
-    // direct fetch is bot-walled, so it is the common case and no edge. A consumer whose policy is never to lose a page got a bare
-    // refusal here and had to drop it.
     if (isQuarantined(page)) return quarantined(config, url, started, 'Prompt-injection signals in fallback content.', page);
 
     emitUsage(config, { lane: 'own', rung: 'jina', kind: 'fetch', url, ok: true, latencyMs: Date.now() - started, costUsd: 0 });

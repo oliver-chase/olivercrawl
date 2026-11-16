@@ -1,22 +1,14 @@
 // ─── HTML to CrawlPage ──────────────────────────────────────────────────────
 //
 // The single place raw HTML becomes the shape a consumer receives: text,
-// markdown, structured data, links, hashes and the guard verdict.
-//
-// Extracted from the own lane so that file holds policy and the rung ladder
-// only. Every rung that produces HTML routes through here, which is what
-// keeps one parser, one guard and one page shape across the direct fetch, the
-// render rungs and the archive rung — a second construction path is how those
-// drift apart.
+// markdown, structured data, links, hashes and the guard verdict. Every rung
+// routes through here, so the direct fetch, the render rungs, the archive and
+// the text rungs share one parser, one guard and one page shape.
 
 import * as cheerio from 'cheerio';
 /**
- * QUARANTINE-EVIDENCE-1: a refusal that carries what tripped it.
- *
- * This was a bare `'quarantined'` string, which told the caller the page was
- * withheld and nothing else. A consumer that must never lose a page had no
- * material to build a review task from, so the only thing it could do was drop
- * it — silently, which is what quarantining exists to prevent.
+ * QUARANTINE-EVIDENCE-1: a refusal that carries what tripped it, so a consumer that must never lose a page
+ * has the material to build a review task from.
  */
 export type QuarantineEvidence = {
   quarantined: true;
@@ -99,10 +91,8 @@ export async function buildPage(input: {
     }
   });
 
-  // GUARD-TITLE-1: <title> lives in <head>, so it was never part of the body
-  // text or the markdown the guard inspects, and shipped raw. A title is page
-  // content — callers display it and feed it to models — so it gets the same
-  // treatment as everything else the page supplies.
+  // GUARD-TITLE-1: <title> lives in <head>, outside the body text and markdown the guard inspects. Callers
+  // display it and feed it to models, so it passes the guard like everything else the page supplies.
   const rawTitle = $('title').first().text().trim();
   const titleGuard = rawTitle ? sanitizeCrawledText(rawTitle, input.maxTextChars) : null;
   if (titleGuard && titleGuard.signals.length > 0) {
@@ -195,10 +185,7 @@ export async function buildPage(input: {
     likelyEmptyState: looksLikeEmptyState(sanitizedMarkdown.text || sanitized.text),
     candidateContentImages: contentImages,
     extractorVersion: EXTRACTOR_VERSION,
-    // BOTH fields, because an HTML page produces two. `markdown` is capped
-    // independently and is the field the README tells consumers to feed a
-    // model — reporting only the text cap left a page whose markdown ended in
-    // [TRUNCATED] claiming to be complete.
+    // Both fields, because `markdown` is capped independently and is the field consumers feed a model.
     redactionCount: sanitized.redactionCount + sanitizedMarkdown.redactionCount,
     truncated: sanitized.truncated || sanitizedMarkdown.truncated,
     structuredData: summarizeStructuredData(jsonLd),
@@ -220,25 +207,6 @@ export async function buildPage(input: {
   };
 }
 
-/**
- * Build a CrawlPage for a rung that produced TEXT and no HTML — the
- * calendar/CSV/JSON documents, the PDF text layer, Jina, and the vendor lane.
- *
- * These four rungs each hand-assembled the same object literal. Adding a
- * REQUIRED field to CrawlPage surfaced every one of them through the type
- * checker, but an optional field would not have, and the rungs would have
- * drifted apart silently — one returning a field the others omit is exactly
- * the kind of difference a consumer discovers as inconsistent data rather
- * than as an error.
- *
- * The HTML-derived fields are empty here and never faked, which is the same
- * honesty rule `contentRegionSha256` follows: a rung change must never look
- * like a content change.
- */
-// PAGE-SHAPE-1: both constructors here are held to one contract by
-// tests/lanes/page-shape.test.ts, which drives every rung end to end and
-// checks what is IN the page, beyond the fact that a page came back. A dropped
-// field surfaces as worse extraction blamed on the sites, with no error raised.
 /** A rung-reported title, sanitized, or null when it carries an injection signal. */
 function guardedTitle(title: string | null | undefined): string | null {
   if (!title) return null;
@@ -246,6 +214,14 @@ function guardedTitle(title: string | null | undefined): string | null {
   return guard.signals.length > 0 ? null : guard.text || null;
 }
 
+/**
+ * Build a CrawlPage for a rung that produced TEXT and no HTML: the calendar, CSV and JSON documents, the PDF
+ * text layer, Jina and the vendor lane. The HTML-derived fields are empty here and never faked, so a rung
+ * change never looks like a content change.
+ *
+ * PAGE-SHAPE-1: buildPage and this constructor are held to one contract by tests/lanes/page-shape.test.ts,
+ * because a dropped field surfaces as worse extraction blamed on the sites, with no error raised.
+ */
 export async function buildTextPage(input: {
   url: string;
   /** The rung's raw text; it passes the guard here, before anything is built from it. */
@@ -261,15 +237,8 @@ export async function buildTextPage(input: {
   /** Hash source when the delivered text is not what arrived on the wire. */
   bodySource?: string;
   /**
-   * Set ONLY when the rung's text already IS markdown.
-   *
-   * The vendor rungs are asked for markdown explicitly (Firecrawl with
-   * `onlyMainContent`), so their text is markdown and belongs in both fields —
-   * the same value with no second conversion. Jina returns prose that merely
-   * looks markdown-ish, so it leaves this unset and reports an empty
-   * `markdown` and claims no structure it did not derive.
-   *
-   * Defaults to empty, which is the honest answer for a rung with no HTML.
+   * Set only when the rung's text already is markdown, as the vendor rungs' is: it then fills both fields.
+   * Jina's prose merely looks markdown-ish, so it leaves `markdown` empty and claims no structure it did not derive.
    */
   textIsMarkdown?: boolean;
 }): Promise<CrawlPage | QuarantineEvidence> {

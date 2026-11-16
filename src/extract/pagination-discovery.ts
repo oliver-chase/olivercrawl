@@ -1,20 +1,15 @@
 // ─── Listing pagination following ────────────────────────────────
 //
-// A paginated calendar/listing page ("page 1 of 4", "Older events ›") only
-// ever gets its FIRST page crawled today — everything past it is invisible.
-// On a source's first-ever crawl, follow the seed page's own "next page"
-// link up to a small cap, adding each followed page as an extra seed
-// alongside F1's sitemap URLs. Unlike F1 (all seeds discoverable from one
-// sitemap fetch upfront), pagination is inherently sequential — page 3's URL
-// only exists in page 2's HTML — so this walks one page at a time.
+// A paginated calendar/listing page ("page 1 of 4", "Older events ›") has
+// content past its first page. This follows the seed page's own "next page"
+// link up to a small cap, adding each followed page as an extra seed beside
+// the sitemap URLs. Page 3's URL only exists in page 2's HTML, so this walks
+// one page at a time.
 //
-// Known scope limit (not a bug): this walks the RAW HTML, a plain fetch —
-// deliberately free/deterministic regardless of the source's own crawl lane,
-// same reasoning F1's sitemap fetch already has. A browser-lane source whose
-// "next page" link only exists in the client-rendered DOM (not the raw HTML)
-// simply won't be found here; it fails soft to zero followed pages, same as
-// a source with no pagination at all, with no error. Paying for a render just
-// to DISCOVER a link (before the main crawl even runs) isn't a good trade.
+// It walks the RAW HTML with a plain fetch, free and deterministic whatever
+// the source's crawl lane. A "next page" link that exists only in the
+// client-rendered DOM is not found, and that fails soft to zero followed
+// pages: paying for a render just to discover a link is not a good trade.
 
 import { pooledFetchFor } from '../fetch/connection-pool.js';
 import { safeFetch } from '../fetch/safe-fetch.js';
@@ -22,7 +17,7 @@ import { readBodyCapped } from '../fetch/http-mechanics.js';
 import { hostsMatchAllowingWww } from '../fetch/host-policy.js';
 import type { DnsLookupFn } from '../core/types.js';
 
-// "Capped 3 pages" (spec) = the seed page + 2 followed pages.
+// Capped at 3 pages: the seed page and 2 followed pages.
 const MAX_ADDITIONAL_PAGES = 2;
 const MAX_HTML_BYTES = 1_500_000;
 

@@ -14,13 +14,7 @@ const MAX_REDIRECTS = 4;
 /**
  * SSRF-guarded fetch that follows redirects manually, re-validating each hop.
  *
- * SAFEFETCH-PARITY-1: this claimed "same discipline as robots-check /
- * cheap-change-probe" and was weaker than both. It re-resolved each hop's host
- * but accepted ANY host, so a discovery URL could redirect off-site and be
- * followed; and it took no injectable resolver, so a crawler running its own
- * DNS had it bypassed here entirely.
- *
- * Both are closed. A redirect stays on the starting URL's site, or on `sameSiteAs`
+ * SAFEFETCH-PARITY-1: a redirect stays on the starting URL's site, or on `sameSiteAs`
  * when the caller names the target's site. `dnsLookup` is threaded like every other fetch path.
  *
  * `http:` is still accepted here, unlike the crawl path. Feed and sitemap URLs

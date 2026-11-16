@@ -4,10 +4,7 @@
 // crawl gate fail-closes on 'unknown' — so a source whose robots.txt was never
 // actually fetched (or whose fetch hiccuped once) sits blocked forever even
 // when the site plainly allows crawlers. This module fetches robots.txt for
-// real, as the configured user agent, and decides. It's the auto-fix behind:
-//   - the per-row / bulk "Re-check robots" admin action, and
-//   - the self-heal step on the crawl path (auto-recheck an 'unknown' source
-//     once before giving up on it).
+// real, as the configured user agent, and decides.
 //
 // Fail-closed: ANY fetch/parse failure returns 'unknown' (never a false
 // 'allow') — a site actively blocking this crawler's request stays blocked, which
@@ -149,8 +146,7 @@ export async function evaluateRobotsForUrl(
     // 5xx and anything else: the standard says assume complete disallow.
     if (!res.ok) {
       dropBody(res);
-      // WHITE-LABEL-2: this named one vendor's bot regardless of the
-      // caller's actual user agent — wrong output for every other consumer.
+      // WHITE-LABEL-2: the reason names no particular bot, since the caller's user agent can be any.
       return {
         policy: 'unknown',
         reason: `robots.txt fetch returned ${res.status} — the site may be blocking this crawler`,

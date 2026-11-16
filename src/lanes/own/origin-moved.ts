@@ -19,18 +19,12 @@ function registrableHost(host: string): string {
 /**
  * Did the direct rung refuse because the origin moved to a DIFFERENT SITE?
  *
- * Decided from the URL in the refusal, whatever wording the guard used. The
- * first version matched `Blocked off-domain ... URL`, and the guard checks
- * https and credentials BEFORE off-domain — so a redirect to plain http is
- * refused as "non-https" and the word never appears. Parked domains routinely
- * 301 to http, which is the case this exists for.
+ * Decided from the URL in the refusal, whatever wording the guard used: the
+ * guard checks https before off-domain, so a parked domain's 301 to plain http
+ * is refused as "non-https" and never says off-domain.
  *
  * Registrable-domain comparison, so `site.com` -> `events.site.com` counts as
  * the same site: same publisher, and flagging it adds review load for a non-event.
- *
- * Tested through the ladder in `tests/lanes/origin-moved.test.ts`. An earlier
- * version asserted a duplicated copy of the regex, so rewriting the detector
- * left it green.
  */
 export function isOffDomainRefusal(detail: string, requestedUrl: string): boolean {
   const found = detail.match(/https?:\/\/[^\s)]+/);
@@ -44,12 +38,7 @@ export function isOffDomainRefusal(detail: string, requestedUrl: string): boolea
 
 /**
  * Attach ORIGIN-MOVED-1 to any rung that served a page past an off-domain
- * refusal, Jina or otherwise.
- *
- * The first version wrapped the Jina branch only, and `renderFallback` runs
- * BEFORE it: on any deployment with `browserRender` configured, the render rung
- * won and the flag was unreachable. The archive rung had the same gap. The
- * signal has to live where the ladder decides.
+ * refusal. The ladder calls it for every rung, so the flag holds whichever rung won.
  */
 export function withOriginMoved(result: CrawlResult, priorDetail: string, servedBy: string, requestedUrl: string): CrawlResult {
   if (!result.ok || result.notModified) return result;

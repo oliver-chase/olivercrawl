@@ -10,8 +10,6 @@ import type { CrawlOptions, CrawlPage, CrawlTarget } from './core/types.js';
 export type SiteCrawlOptions = CrawlOptions & {
   /** URLs to start from. Falls back to target.seeds, then target.baseUrl. */
   seeds?: string[];
-  /** Hard ceiling on pages fetched in one run, seeds included. */
-  maxPages?: number;
   /** Retries after the first attempt, per URL. Default 1; 0 tries each URL once. Structural failures are never retried. */
   maxRetries?: number;
   /** Follow "next page" links discovered on crawled pages, up to maxPages.

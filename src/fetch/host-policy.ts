@@ -28,18 +28,9 @@ export const DEFAULT_DOH_ENDPOINT = 'https://cloudflare-dns.com/dns-query';
 /**
  * Hosts proven to resolve publicly. Success-only.
  *
- * HOST-CACHE-SCOPE-1 (found by live validation): this was a
- * single module-level Map shared by every crawler in the process. A host
- * validated by one crawler was therefore trusted by ALL of them — including
- * one deliberately configured with a different resolver. The live SSRF check
- * failed to block a host resolving to 127.0.0.1 purely because an earlier
- * check had already cached that hostname as safe.
- *
- * A resolver is part of a crawler's SECURITY configuration, so its verdicts
- * must not leak across instances that were configured differently. The cache
- * is now keyed per resolver identity; a crawler with its own dnsLookup gets
- * its own namespace, and the shared default keeps sharing (which is correct —
- * same resolver, same answer).
+ * HOST-CACHE-SCOPE-1: a resolver is part of a crawler's SECURITY configuration,
+ * so the cache is keyed per resolver identity. A crawler with its own dnsLookup
+ * gets its own namespace, and crawlers on the shared default share answers.
  */
 const DNS_SAFE_HOST_TTL_MS = 60_000;
 const DOH_TIMEOUT_MS = 8_000;

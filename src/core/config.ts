@@ -5,13 +5,9 @@
 //
 //   resolveConfig()  — fills defaults, so every internal call site can read a
 //                      fully-populated config without optional-chaining.
-//   configFromEnv()  — OPTIONAL convenience for the common case: a consumer
-//                      keeps its keys in .env / .env.local like every other
-//                      service credential, and wants them picked up without
-//                      hand-wiring. This is a separate, opt-in function
-//                      precisely so the core stays env-free: a consumer that
-//                      needs two differently-keyed crawlers in one process
-//                      just builds two configs and never calls this.
+//   configFromEnv()  — OPTIONAL: picks keys up from the environment. It is
+//                      opt-in so the core stays env-free, and two
+//                      differently-keyed crawlers just build two configs.
 //
 // Env names are namespaced OLIVERCRAWL_* first, with the bare vendor names
 // (FIRECRAWL_API_KEY, ...) accepted as a fallback — those are the names the

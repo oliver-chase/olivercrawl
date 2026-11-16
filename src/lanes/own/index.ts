@@ -62,11 +62,7 @@ export async function crawlWithOwnLane(
 
   // Politeness: hold the per-host gap BEFORE the request, after policy has
   // already approved it — no point rate-limiting a fetch we will refuse.
-  // ROBOTS-DELAY-1: the site's own Crawl-delay is a FLOOR for the gap.
-  // Parsing robots.txt for permission and then ignoring its pacing is taking
-  // only the half of the file that suits us — and it is a common way to get
-  // blocked by a site that technically allowed you. A caller who configured a
-  // slower interval still wins; this can only ever make us more polite.
+  // ROBOTS-DELAY-1: the site's own Crawl-delay is a floor for the gap, and a slower configured interval wins.
   const publishedDelay = publishedCrawlDelayMs(requestUrl.hostname) ?? 0;
   await throttleHost(
     requestUrl.hostname,
@@ -75,14 +71,8 @@ export async function crawlWithOwnLane(
   );
 
   // BETTER-RUNGMEMORY-1: if this host is known to reject the plain fetch and
-  // succeed on a later rung, skip straight there.
-  //
-  // Self-healing on the way back: if the remembered path now FAILS, the
-  // memory is stale — the host may have stopped blocking, in which case the
-  // fetch we skipped is exactly what would have worked. So the memory is
-  // dropped and the normal ladder runs from the top. Without this, a rung
-  // that goes down while a memory points at it costs the PAGE as well as an
-  // extra request, and that would make this optimisation a liability.
+  // succeed on a later rung, skip straight there. When the remembered path
+  // fails, the memory is dropped and the direct fetch runs after all.
   // LANE-ONCE-1: when the remembered path fails, its ladder has already tried every later rung, so a failure
   // of the direct fetch that follows returns that result and does not run the ladder a second time.
   let spentLadder: CrawlResult | null = null;
@@ -120,9 +110,8 @@ export async function crawlWithOwnLane(
   // How long the origin took is the input to adaptive pacing.
   recordHostLatency(requestUrl.hostname, Date.now() - fetchStartedAt);
 
-  // A 304 is the whole point of sending validators: nothing changed, nothing
-  // to parse, nothing charged. Reported distinctly from "empty".
-  // A 304 answers a conditional request. With no validators sent it is not "unchanged", it is a fault.
+  // A 304 to a conditional request means nothing changed, reported distinctly from "empty". With no
+  // validators sent, a 304 is a fault.
   if (response.status === 304 && (options.etag || options.lastModified)) {
     dropBody(response);
     emitUsage(config, { lane: 'own', rung: 'conditional', kind: 'fetch', url, ok: true, latencyMs: Date.now() - started, costUsd: 0 });
@@ -130,10 +119,7 @@ export async function crawlWithOwnLane(
   }
 
   if (!response.ok) {
-    // CRAWL-BACKOFF-1: an origin answering 429/503 often states HOW LONG to
-    // wait. Ignoring that and retrying on our own schedule is precisely the
-    // behaviour that earns a crawler a ban, so the instruction is surfaced
-    // for the retry loop to honour (see crawl-site.ts).
+    // CRAWL-BACKOFF-1: the origin's Retry-After is surfaced for the retry loop to honour.
     const retryAfterMs = parseRetryAfter(response.headers.get('retry-after'));
     dropBody(response);
     const detail = retryAfterMs
@@ -190,10 +176,8 @@ export async function crawlWithOwnLane(
   const html = await readBodyCapped(response, config.limits.maxBodyBytes);
 
   // CRAWL-FEED-1: a data document (ICS, CSV, JSON, RSS/Atom) is delivered
-  // verbatim. Parsing it into events or rows is domain logic and belongs to
-  // the caller — but the raw body has to REACH them, which it previously
-  // never did. It still goes through the injection guard: a calendar feed is
-  // untrusted remote text exactly like a page is.
+  // verbatim, and parsing it into events or rows belongs to the caller. It
+  // still passes the injection guard: a feed is untrusted remote text.
   if (contentKind !== 'html') {
     const dataPage = await buildTextPage({ ...pageMeta, lane: 'own', maxTextChars, text: html, contentKind, bodySource: html });
     if (isQuarantined(dataPage)) return quarantined(config, url, started, `Prompt-injection signals in ${contentKind} content.`, dataPage);
@@ -209,10 +193,8 @@ export async function crawlWithOwnLane(
   }
 
   if (!page.text.trim()) {
-    // Served HTML had no readable text — a JS shell. Same free ladder.
-    // BODY-RECEIVED-1: an origin DID answer here — the page simply had no
-    // readable text. The ladder's later rungs cannot know that, so it is
-    // recorded now, with no inference from wording afterwards.
+    // Served HTML had no readable text — a JS shell. BODY-RECEIVED-1: the origin did answer, which only
+    // this point knows, so the ladder is told.
     return ladder('No visible text in the served HTML', { bodyReceived: true });
   }
 

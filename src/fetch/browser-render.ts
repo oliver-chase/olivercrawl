@@ -1,19 +1,7 @@
 // ─── Browser render rung (own lane) ─────────────────────────────────────────
 //
-// Renders a JS-only page through a browser service and returns its HTML.
-//
-// This sits in the OWN lane on purpose: the endpoint is
-// yours. Point it at a browserless/Playwright container you run and it costs
-// no per-call vendor fee — which is exactly the distinction the two lanes
-// encode (lane 1 = infrastructure you control, lane 2 = someone's API you are
-// billed by). Nothing stops you pointing it at a paid rendering service
-// instead; then it is a cost you have chosen and can see.
-//
-// Fully optional. No `browserRender` config means the rung is skipped and the
-// crawl falls through to the free Jina fallback, exactly as if it did not
-// exist. That is the same degrade-gracefully contract every other rung has.
-//
-// Only the render call itself lives here; crawl orchestration is handled by the lane.
+// Renders a JS-only page through a browser service and returns its HTML. It sits in the OWN lane because
+// the endpoint is infrastructure the caller controls. Only the render call lives here; the lane orchestrates.
 
 import { assertRedirectUrlAllowedForHost } from './host-policy.js';
 import type { ResolvedConfig } from '../core/config.js';
@@ -79,23 +67,12 @@ export async function renderViaService(targetUrl: string, config: ResolvedConfig
   if (data.error) throw new Error(`Browser render service error: ${data.error}`);
   if (!data.html) throw new Error('Browser render service returned no HTML');
 
-  // RENDER-REDIRECT-2: the service tells us where it LANDED, and that value is
-  // trusted all the way into buildPage. RENDER-REDIRECT-1 hardened the local
-  // rung against exactly this and the remote one had no equivalent check
-  // anywhere — so a redirect off the requested site came back as ordinary
-  // content under the requested URL, which is how a sold or parked domain
-  // returns the new owner's page as a success.
-  //
-  // Checked HERE, inside the rung: a caller that forgets is the
-  // failure mode, and this is the only place the service's answer enters.
+  // RENDER-REDIRECT-2: the service says where it LANDED, and that value is trusted all the way into
+  // buildPage, so a redirect off the requested site is refused here, where the service's answer enters.
   const landed = data.url || targetUrl;
   const requested = new URL(targetUrl);
-  // The SAME-SITE policy check, with no DNS check. This rung never dials the
-  // landing host — the render service did — so resolving it here would add
-  // network I/O to learn about a connection we do not make, and it broke tests
-  // that legitimately stub no resolver. What this rung CAN know is whether the
-  // service left the site it was asked for, which is the control that matters:
-  // off-domain, cross-port, credentialed and http-downgrade all refuse.
+  // The same-site policy check, with no DNS check: this rung never dials the landing host, the render
+  // service did. Off-domain, cross-port, credentialed and http-downgrade landings all refuse.
   assertRedirectUrlAllowedForHost(requested.hostname, requested.port || '', landed);
 
   return {

@@ -1,9 +1,7 @@
 // ─── Usage emission ─────────────────────────────────────────────────────────
 //
 // One home for the "report this call, but never let reporting break a crawl"
-// rule. Previously duplicated verbatim in three modules (own lane, vendor
-// lane, search) — three copies of a try/catch is three chances for one of
-// them to drift into throwing.
+// rule.
 
 import type { ResolvedConfig } from './config.js';
 import type { UsageEvent } from './types.js';

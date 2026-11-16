@@ -162,9 +162,7 @@ export type CrawlPage = {
    * GUARD-TELEMETRY-1: what the guard did to this page, as distinct from
    * whether it refused it.
    *
-   * The sanitiser already computes both and they were discarded before the
-   * page was built. A consumer storing crawl provenance wants them: a page
-   * that was capped is a page whose tail was never seen, and a redaction count
+   * A page that was capped is a page whose tail was never seen, and a redaction count
    * above zero means the text differs from what the origin served — both
    * change how much you should trust a downstream extraction, and neither is
    * recoverable afterwards.
@@ -249,18 +247,13 @@ export type CrawlResult =
        * ORIGIN-MOVED-1: the direct fetch was REFUSED on policy grounds and a
        * fallback rung served the page anyway.
        *
-       * Example: a domain is sold and now
-       * redirects to an unrelated business. The direct
-       * rung refuses the off-domain redirect; Jina then follows the
-       * same redirect from its own IPs and returns the new owner's content, and
-       * the crawl would report `ok: true` with no indication that the page belongs
-       * to a different business.
+       * Example: a domain is sold and now redirects to an unrelated business.
+       * The direct rung refuses the off-domain redirect, and Jina follows the
+       * same redirect from its own IPs and returns the new owner's content.
        *
-       * Refusing outright is the wrong fix. An off-domain redirect is routinely
-       * a genuine migration, so
-       * the fallback still runs — but the refusal it stepped past travels with
-       * the result, so a consumer can hold the page for review before
-       * publishing content for a site that has changed hands.
+       * An off-domain redirect is routinely a genuine migration, so the fallback
+       * still runs, and the refusal it stepped past travels with the result so a
+       * consumer can hold the page for review.
        *
        * Absent on an ordinary crawl. Its presence IS the signal.
        */
@@ -283,19 +276,14 @@ export type CrawlResult =
        * read and had nothing in it, which a catalogue may want to RETAIN for a
        * later parser pass and is not logged as an error.
        *
-       * The library reports the answer directly, so a consumer never has to
-       * regex-match `detail`.
        */
       bodyReceived?: boolean;
       /**
        * QUARANTINE-EVIDENCE-1: what tripped the guard, and enough of the page
        * to review it. Present only when `reason === 'quarantined'`.
        *
-       * Without this a quarantine is indistinguishable from a fetch failure at
-       * the call site, so a consumer whose policy is "never lose a page" has
-       * nothing to build a review task from and drops it silently — the exact
-       * outcome quarantining exists to prevent. A review task needs the
-       * signals and the text to render at all.
+       * A consumer whose policy is "never lose a page" builds a review task
+       * from the signals and the text.
        *
        * The text is SANITIZED: a reviewer sees what the page said without
        * receiving a live payload. Redactions are already applied.

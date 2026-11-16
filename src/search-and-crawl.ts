@@ -14,8 +14,7 @@
 //      exactly as everywhere else.
 //
 // Each result is crawled as its own single-page target, because a search
-// result set spans many unrelated hosts, so each result is crawled on its own
-// and same-site rules apply per result.
+// result set spans many unrelated hosts, so same-site rules apply per result.
 
 import type { Crawler } from './index.js';
 import type { CrawlOptions, CrawlPage } from './core/types.js';

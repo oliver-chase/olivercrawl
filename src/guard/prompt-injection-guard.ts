@@ -83,14 +83,11 @@ const PROMPT_INJECTION_PATTERNS: PromptInjectionPattern[] = [
   {
     id: 'local-secret-access',
     severity: 'high',
-    // The gap between the verb and the sensitive token is bounded (like
-    // tool-exfiltration above) in place of `[^\n]*`. normalizeForDetection
-    // flattens all newlines to spaces, so an unbounded gap let a common
-    // English verb ("open" as in venue hours) match a "secret"/"credential"
-    // word anywhere else on the same now-single-line page — e.g. a cookie or
-    // privacy footer — quarantining legitimate event pages. A real
-    // `cat ~/.ssh/id_rsa` / `open ~/.aws/credentials` keeps the token within
-    // a few chars of the verb, well inside this window.
+    // The gap between the verb and the sensitive token is bounded, like
+    // tool-exfiltration above. normalizeForDetection flattens newlines, so an
+    // unbounded gap would let "open" in venue hours match a privacy footer's
+    // "credential" anywhere on the page. A real `cat ~/.ssh/id_rsa` keeps the
+    // token within a few chars of the verb.
     label: 'Local secret access request',
     // GUARD-PRECISION-2: 'secret' and 'credential' are ordinary English
     // words, and the verbs are ordinary English verbs, so this fired on
@@ -242,13 +239,10 @@ export function sanitizeCrawledText(input: string, maxChars = DEFAULT_MAX_TEXT_C
   // characters cannot carry it back out unredacted. An ordinary page keeps its text as served.
   if (signals.length > 0) sanitized = sanitized.replace(INVISIBLE, '').normalize('NFKC');
 
-  // GUARD-REDACT-1: redaction FOLLOWS detection. Only patterns that actually
-  // raised a signal are redacted.
-  //
-  // Only patterns that raised a signal redact, so an ordinary page keeps a long
-  // asset URL that `encoded-payload` would match outside its URL-free check
-  // (GUARD-PRECISION-3), and a non-zero redactionCount means an injection was
-  // present (GUARD-TELEMETRY-1). A page with no signals is returned unredacted.
+  // GUARD-REDACT-1: redaction FOLLOWS detection. Only patterns that raised a
+  // signal redact, so an ordinary page keeps a long asset URL that
+  // `encoded-payload` would match outside its URL-free check (GUARD-PRECISION-3),
+  // and a non-zero redactionCount means an injection was present (GUARD-TELEMETRY-1).
   const raisedIds = new Set(signals.map((signal) => signal.id));
   let redactionCount = 0;
   const redacted = () => {

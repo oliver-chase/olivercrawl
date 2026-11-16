@@ -10,13 +10,6 @@
 // Chromium), an explicit `localRender: true` so a consumer deploying to both a
 // laptop and a worker chooses where rendering happens and never finds out by
 // crash, and playwright actually importing — it is never a dependency here.
-//
-// THE IMPORT TRICK: a plain `import('playwright')`, even computed as
-// ['play','wright'].join(''), gets constant-folded by bundler tracers (@vercel/nft,
-// esbuild, webpack), which then try to resolve playwright's optional deps and break
-// the build of any consumer bundling for serverless. That can pin a deployment to a stale
-// build (DEPLOY-BLOCKER-1). A Function-constructor import
-// is invisible to every tracer — resolved at real runtime, only past guards 1-2.
 
 import { assertHostResolvesToPublicAddress, assertRedirectUrlAllowedForHost } from './host-policy.js';
 import {
@@ -122,12 +115,8 @@ export async function runActions(page: RenderPage, actions: BrowserAction[], ori
 /**
  * RENDER-REDIRECT-1: where did the browser actually land?
  *
- * `page.goto` follows the entire redirect chain inside Chromium, and nothing
- * downstream re-checks the destination — the caller builds the page with the
- * URL it ASKED for. An origin could therefore bounce this rung to any host,
- * including a private address, and have the content returned under the
- * original URL. The direct-fetch rung re-validates every hop; this one did
- * not, while the README claimed the check repeats after each redirect.
+ * The caller builds the page with the URL it ASKED for, so without this check an origin could bounce the
+ * browser to any host, including a private address, and have that content returned under the original URL.
  *
  * Exported for tests: playwright's import is deliberately invisible to
  * bundlers, so the surrounding function cannot be mocked.
@@ -138,13 +127,8 @@ export async function assertLandedSameSite(
   dnsLookup?: DnsLookupFn,
 ): Promise<void> {
   const requested = new URL(requestedUrl);
-  // Delegate to the SAME guard every other rung uses, with no hostname
-  // comparison here. The first version of this compared hostname only, and QA
-  // proved three live bypasses it missed: cross-port (a 302 from
-  // host:A to host:B returned an internal admin service), https-to-http
-  // downgrade, and a credentialed landing URL. All three are already refused
-  // by assertRedirectUrlAllowedForHost, which is why nothing should
-  // re-implement it.
+  // The same guard every other rung uses, which also refuses a cross-port landing, an https-to-http
+  // downgrade and a credentialed landing URL.
   assertRedirectUrlAllowedForHost(requested.hostname, requested.port || '', finalUrl);
   // Then the resolution check: a same-named host can still resolve somewhere
   // private between the policy check and the browser's own lookup.
@@ -173,23 +157,19 @@ export async function isLocalRenderAvailable(): Promise<boolean> {
  * missing browser, a timeout or a dead render service are ordinary and already
  * visible as a skipped rung, while a blocked redirect is an operator's only
  * signal that something is attacking the crawl. Reporting both would train the
- * operator to ignore the signal, which ends up where we started.
+ * operator to ignore the signal.
  *
- * Matching on message TEXT couples this to how the guards word themselves, so
- * rewording one would switch its reporting off silently — RENDER-SILENT-1's own
- * defect, re-entering by another door. render-wiring.test.ts pins the coupling
- * by throwing from the REAL guards and asserting each message still matches.
+ * Matching on message TEXT couples this to how the guards word themselves.
+ * render-wiring.test.ts pins the coupling by throwing from the REAL guards and
+ * asserting each message still matches.
  */
 export function isSecurityRefusal(reason: string): boolean {
   // Chromium's own ERR_BLOCKED_* family is ordinary browser behaviour — an
-  // ad blocker, CORB, a client rule. It contains the word "blocked" and was
-  // being reported as an attack, which is how a real signal gets ignored.
+  // ad blocker, CORB, a client rule — though it contains the word "blocked".
   if (/net::ERR_BLOCKED/i.test(reason)) return false;
   return (
     /Blocked|redirect hop|off-domain|cross-port/i.test(reason) ||
-    // Fail-closed DNS refusals ARE security refusals and worded nothing like
-    // the others, so they were staying silent — the quietest possible failure
-    // of the decision this predicate implements.
+    // Fail-closed DNS refusals ARE security refusals, worded nothing like the others.
     /DNS lookup returned (no addresses|invalid address)/i.test(reason) ||
     // Scoped to OUR credentialed-URL refusal. A bare /credential/ also matched
     // a site's own "invalid credentials" body text.
@@ -214,10 +194,8 @@ export async function renderViaLocalChromium(
   actions: BrowserAction[] = [],
   dnsLookup?: DnsLookupFn,
   /**
-   * RENDER-SILENT-1: called when the rung refused for a SECURITY reason rather
-   * than being unavailable. Without it, `catch { return null }` made an active
-   * redirect attack indistinguishable from "playwright is not installed" — the
-   * one failure an operator most needs to see looked like the most routine one.
+   * Called when the rung refused for a SECURITY reason, so an active redirect attack does not look like a
+   * missing browser.
    */
   onBlocked?: (reason: string) => void,
 ): Promise<string | null> {
@@ -233,12 +211,8 @@ export async function renderViaLocalChromium(
     context = await browser.newContext({ serviceWorkers: 'block' });
     await context.addInitScript('delete window.WebSocket; delete window.WebSocketStream;');
     const page = await context.newPage();
-    // RENDER-HOP-1: validate every NAVIGATION hop, including where the chain
-    // ended. Checking only the landing let `site -> 127.0.0.1:P -> site` render
-    // normally while the private server received a real request — the request
-    // itself is the leak, and a chain that returns home hides it completely.
-    // The direct-fetch rung validates each hop; this brings the render rung to
-    // the same standard.
+    // RENDER-HOP-1: validate every NAVIGATION hop, including where the chain ended. A chain such as
+    // `site -> 127.0.0.1:P -> site` lands home, while the request to the private server is itself the leak.
     const blockedHops: string[] = [];
     const pinnedFetch = pooledFetchFor(dnsLookup);
     await page.route('**/*', async (route) => {
@@ -309,11 +283,8 @@ export async function renderViaLocalChromium(
     try {
       await page.goto(url, { waitUntil: 'domcontentloaded', timeout: RENDER_TIMEOUT_MS });
     } catch (navError) {
-      // Aborting the navigation request IS how a hop is refused, so Chromium
-      // reports the refusal as `net::ERR_FAILED` — indistinguishable from an
-      // ordinary network error, and therefore not reported. Our own record of
-      // why we aborted has to win over the browser's generic message, or the
-      // guard blocks the attack and tells nobody. RENDER-SILENT-1 again.
+      // Aborting the navigation request IS how a hop is refused, so Chromium reports it as a generic
+      // `net::ERR_FAILED`. Our own record of why we aborted wins, so the refusal is reported.
       if (blockedHops.length > 0) throw new Error(`Render blocked a redirect hop — ${blockedHops[0]}`);
       throw navError;
     }
@@ -328,8 +299,6 @@ export async function renderViaLocalChromium(
     return html && html.length > 0 ? html : null;
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
-    // Only security refusals are reported. A missing browser, a timeout or a
-    // dead render service are ordinary and already visible as a skipped rung.
     if (isSecurityRefusal(reason)) onBlocked?.(reason);
     return null;
   } finally {

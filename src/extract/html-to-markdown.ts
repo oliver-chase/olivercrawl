@@ -6,8 +6,7 @@
 // is the difference between an extractor reading and guessing.
 //
 // Scoped to the main content region, so nav, footers and cookie banners never
-// reach the model — Firecrawl's `onlyMainContent`, using logic we already had
-// and were spending only on a change hash.
+// reach the model.
 //
 // Hand-written, with no Turndown dependency: the tag set that matters for
 // extraction is small, and a dependency would need the same injection and
@@ -196,13 +195,8 @@ function renderNode($: CheerioAPI, $el: Cheerio<AnyNode>, el: AnyNode, blocks: s
     }
 
     case 'a': {
-      // MARKDOWN-BLOCKLINK-1: a link that is a direct child of a
-      // container, outside a paragraph. The `default` branch
-      // recursed into its text and emitted the label with the href DROPPED,
-      // so any site listing links as bare children of a div — search results,
-      // index pages, link lists — produced markdown with no URLs at all.
-      //
-      // Rendered from the anchor itself, since inline() walks an element's
+      // MARKDOWN-BLOCKLINK-1: a link that is a direct child of a container, outside a paragraph, as in
+      // search results and link lists. Rendered from the anchor itself, since inline() walks an element's
       // children and would keep the label without the href.
       const label = inline($, $el).trim();
       const href = $el.attr('href') || '';
@@ -257,16 +251,10 @@ function renderList($: CheerioAPI, $list: Cheerio<AnyNode>, depth: number): stri
 /**
  * Render one <img> as markdown. Shared by the block and inline paths.
  *
- * MARKDOWN-DATAURI-1 (found by scripts/parity-check.mjs on a live
- * site): a `data:` src is never emitted. Lazy-loading libraries put a 1x1
- * base64 PNG in `src` and the real URL in `data-src`, and emitting that
- * base64 blob tripped the injection guard's encoded-payload rule — which
- * quarantined an ordinary page and would have done so for every site using
- * the pattern, which is most of them.
- *
- * Dropping it costs nothing: an extractor cannot read pixels, so a data URI
- * carries no information a consumer can use. The alt text is kept, since it
- * is frequently the only description of the image.
+ * MARKDOWN-DATAURI-1: a `data:` src is never emitted. Lazy-loading libraries
+ * put a 1x1 base64 PNG in `src`, and that blob trips the injection guard's
+ * encoded-payload rule. A data URI carries nothing an extractor can read, and
+ * the alt text is kept, since it is frequently the only description.
  */
 function inlineImage($img: Cheerio<AnyNode>): string {
   const alt = ($img.attr('alt') || '').trim();

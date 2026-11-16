@@ -1,20 +1,8 @@
 // ─── Per-host throttle ──────────────────────────────────────────────────────
 //
-// Politeness that actually holds across a whole process, beyond a single
-// crawl run.
-//
-// crawlSite is sequential and can pause between pages, but that only governs
-// ONE run. Crawl fifty targets that happen to share a host — a city's venues
-// all on the same CMS, or several targets behind one CDN — and nothing
-// stopped fifty simultaneous requests hitting that origin. That is how a
-// crawler earns a block, and the origin has no way to tell it apart from an
-// attack.
-//
-// This enforces a minimum gap between requests to the SAME host, process-wide
-// and across concurrent callers. Different hosts never wait on each other.
-//
-// Off by default (0 ms): the own lane's politeness has to be a deliberate,
-// visible setting, so a consumer never meets a hidden latency tax.
+// A minimum gap between requests to the SAME host, process-wide and across
+// concurrent callers, plus latency-based pacing and a per-host slot count.
+// config-types.ts documents minHostIntervalMs and adaptiveThrottleMultiplier.
 
 import { rememberBounded } from './bounded-map.js';
 
@@ -24,19 +12,7 @@ const MAX_TRACKED_HOSTS = 10_000;
 /** Serialised "next allowed time" per host. */
 const NEXT_ALLOWED_AT = new Map<string, number>();
 
-/**
- * Rolling average response latency per host, for adaptive throttling.
- *
- * Borrowed in SPIRIT from Scrapy's AutoThrottle (not its code or its
- * formula): a fixed delay is the wrong tool because it is either too slow
- * for a CDN-backed site or too fast for a struggling one. Latency is the
- * origin telling you how much load it is under — a server that took 4s to
- * answer should not be asked again in 200ms.
- *
- * Deliberately simpler than Scrapy's: one exponential moving average per
- * host and a multiplier. The per-host request limit is a separate slot count
- * in this file.
- */
+/** Rolling average response latency per host, for adaptive throttling: one exponential moving average per host. */
 const AVG_LATENCY_MS = new Map<string, number>();
 
 /** Weight of the newest sample. 0.3 = responsive to a change without one
