@@ -35,7 +35,7 @@ The text is sanitized, so a reviewer sees what the page said and the copy carrie
 ```ts
 if (result.ok && !result.notModified && result.originMoved) {
   result.originMoved.refusal;   // the guard message, naming the new host
-  result.originMoved.servedBy;  // 'jina' | 'archive' | the render rung
+  result.originMoved.servedBy;  // 'proxy' | 'jina' | 'archive' | the render rung
 }
 ```
 
@@ -51,7 +51,7 @@ The free lane runs first, and a paid vendor runs only when it cannot reach the p
 
 ## Crawling a site
 
-`crawlSite` runs one request at a time unless you ask for more, and it never fetches a visited URL twice, so a "next page" link that loops back to page 1 ends the run. Its result lists `pages`, `notModified` (304 answers, never failures), `failures` (per URL, so one bad page never sinks the run) and `truncated` (it stopped at `maxPages` with URLs still queued).
+A `crawlSite` result lists `pages`, `notModified` (304 answers, never failures), `failures` (per URL, so one bad page never sinks the run) and `truncated` (it stopped at `maxPages` with URLs still queued).
 
 ### Cheap re-crawls
 

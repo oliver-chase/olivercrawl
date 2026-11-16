@@ -40,8 +40,8 @@ await check('follows a real redirect', async () => {
 });
 
 await check('a binary content-type is refused, never mis-parsed', async () => {
-  // Since CRAWL-FEED-1 text-ish documents ARE read, so this asserts the half
-  // that must stay refused: HTML-parsing an image produces confident nonsense.
+  // Text documents are read (CRAWL-FEED-1), and binaries stay refused, because
+  // HTML-parsing an image produces confident nonsense.
   // A URL that really exists and really is an image (200 image/png), so this fails on the content-type gate. A 404 would pass
   // for the wrong reason and prove nothing.
   const r = await crawler.crawl(RFC, 'https://www.rfc-editor.org/favicon.ico');

@@ -1,21 +1,17 @@
 #!/usr/bin/env node
 // Compares this library's extraction with a consumer's own extractor on the same pages.
 //
-// CRAWL-PARITY-1. Before any consumer replaces its own extractor with this
-// library, somebody has to demonstrate the two agree. The migration assumed
-// parity and never measured it.
-//
-// This matters more than an ordinary regression: a silent extraction
-// difference across every source does not look like a bug. It looks like the
-// data slowly getting worse, and it is attributed to the sites changing.
+// CRAWL-PARITY-1. A consumer replacing its own extractor with this library
+// measures that the two agree first, because a silent extraction difference
+// across every source reads as the data slowly getting worse and gets blamed
+// on the sites changing.
 //
 //   node scripts/parity-check.mjs urls.txt          # one URL per line
 //   node scripts/parity-check.mjs urls.txt --json   # machine-readable
 //
 // It reports, per URL, what this library extracted. Point your existing
-// extractor at the same list and diff the two reports. Deliberately NOT
-// coupled to any particular consumer's extractor — this library must not
-// import any consumer, or anything downstream.
+// extractor at the same list and diff the two reports. It imports no
+// consumer, since this library depends on nothing downstream.
 //
 // The output is intentionally boring: counts and hashes only, with no prose. Those are
 // what a diff can compare without a human reading every page.

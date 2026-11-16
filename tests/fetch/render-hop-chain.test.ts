@@ -4,22 +4,18 @@ import { followRedirects } from '@/fetch/local-render';
 
 // RENDER-HOP-2: the render rung must follow redirects ITSELF.
 //
-// A per-hop check inside the route handler never runs for redirects: Chromium
-// follows 3xx inside its network stack, so the handler sees only the ORIGINAL
-// request. Driving a
-// real `site -> off-site -> site` chain, the handler saw ONE request while
-// three responses arrived — the off-site server received a real request, and
-// the post-goto landing check passed because the chain came home.
+// Chromium follows 3xx inside its network stack, so a route handler sees only
+// the original request. Unless the rung fetches each hop itself, an off-site
+// hop in a `site -> off-site -> site` chain receives a real request and the
+// landing check passes because the chain came home.
 //
 // The hop walker is driven directly below. playwright's import is deliberately invisible to bundlers,
 // so the route handler around it cannot be mocked, and its wiring is asserted on the source instead.
 // The live suite drives the real chain.
 
 const source = readFileSync(new URL('../../src/fetch/local-render.ts', import.meta.url), 'utf8');
-// Anchored on the comment INSIDE the handler and never on the decision id — the id
-// also appears on the type declaration far above, and slicing from there swept
-// in unrelated code. A sibling test in this repo failed exactly that way by
-// slicing to end-of-file and matching the OTHER branch's route.abort().
+// Anchored on the comment inside the handler, because the decision id also
+// appears far above and a slice from there would sweep in the other branch.
 const navigationBranchRaw = source.slice(
   source.indexOf('follow the redirect chain OURSELVES'),
   source.indexOf('await page.goto('),

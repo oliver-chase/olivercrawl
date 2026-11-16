@@ -25,8 +25,8 @@ import { dropBody, readBodyCapped } from './http-mechanics.js';
 export type JinaFetchResult = { title: string | null; text: string };
 
 // The only host this module contacts is the reader endpoint, but the target URL is handed to a
-// third-party service, so it must be a public https URL: a private or internal address is refused
-// before any request leaves.
+// third-party service, so it must be a public https URL. A private name or address literal is refused
+// here, and the own lane resolves the host against private ranges before any rung runs.
 export async function fetchViaJina(
   targetUrl: string,
   opts?: { fetchImpl?: typeof fetch; endpoint?: string; timeoutMs?: number },

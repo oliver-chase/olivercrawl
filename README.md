@@ -4,7 +4,7 @@
 
 Downloading HTML is easy. The problems start when a crawl runs every hour.
 
-**Safety.** A crawler requests whatever URL it is given, and that URL may come from a user submission, a search result or a redirect. If someone points it at `169.254.169.254`, the address that serves instance metadata on most cloud providers, the crawler could retrieve credentials and return them as page content. `olivercrawl` resolves every hostname and checks the addresses against private ranges before every request and again after every redirect.
+**Safety.** A crawler requests whatever URL it is given, and that URL may come from a user submission, a search result or a redirect. If someone points it at `169.254.169.254`, the address that serves instance metadata on most cloud providers, the crawler could retrieve credentials and return them as page content. `olivercrawl` resolves every hostname and checks the addresses against private ranges before every request it sends and again after every redirect it follows.
 
 **Cost.** In a pipeline that sends crawled content to a language model, fetching the page is cheap and processing it is not. A site checked hourly but changed weekly triggers roughly 160 unnecessary extractions for each one it needs. `olivercrawl` checks whether a page changed before expensive processing happens, using the cheapest signal available, sometimes with no page request at all.
 
@@ -158,7 +158,7 @@ Fetching a known URL needs no provider. Finding URLs needs one, and search provi
 
 ## Configuration
 
-Only `userAgent` is needed, and it defaults to an identifier that names this library and not your deployment, so set your own. A `userAgent` with no contact URL logs a warning once. `configFromEnv()` reads the options below from environment variables:
+Set `userAgent` to a string that names your deployment and carries a contact URL. The default names this library, and a `userAgent` with no contact URL logs a warning once. `configFromEnv()` reads the options below from environment variables:
 
 The environment variables are listed in [`.env.example`](.env.example) and [API](docs/API.md#from-env--envlocal).
 
