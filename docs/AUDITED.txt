@@ -26,7 +26,7 @@ a1be16d05fc14038dc9b549a2fc10d639a4fc6d4 docs/REFERENCE.md
 14e39d4461f9ae4d8af312af7bd03a517a908816 scripts/check-decisions.mjs
 f9fc903ff0290fd8fa954a7b76984de91a667869 scripts/check-imports.mjs
 b1204ff3c1c33e8193dbaac84a7960de7c58e131 scripts/check-install.sh
-b3f79109d6c82248cf2ccb696a2da01e422bebea scripts/check-structure-contract.mjs
+cbd1c6728b6ab892a612782251cba30d108f664b scripts/check-structure-contract.mjs
 5dc44bb8c50aab0b1a6c6bb3b4562d5ed4a142b5 scripts/duplication_check.py
 c5af7beed3c7c069ce7106b941ef1d4d0ba85b48 scripts/live-check.mjs
 6f1a1348d2d15d8095cb3f93519a5c704491a5bd scripts/live-check/harness.mjs
