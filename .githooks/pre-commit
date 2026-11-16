@@ -38,6 +38,21 @@ staged_content() {
     git -C "$REPO_ROOT" show ":$1" 2>/dev/null || cat -- "$1"
   fi
 }
+# gate_list FILE KEY prints each string in the JSON array KEY of the staged FILE.
+gate_list() {
+  git show ":$1" 2>/dev/null | tr '\n' ' ' \
+    | sed -n 's/.*"'"$2"'"[[:space:]]*:[[:space:]]*\[\([^]]*\)\].*/\1/p' \
+    | grep -o '"[^"]*"' | sed 's/^"//; s/"$//' || true
+}
+# matches_glob PATH GLOBS succeeds when PATH matches one of the newline-separated GLOBS.
+matches_glob() {
+  local glob
+  while IFS= read -r glob; do
+    [ -n "$glob" ] || continue
+    case "$1" in $glob) return 0 ;; esac
+  done <<< "$2"
+  return 1
+}
 
 VIOLATIONS=0
 
@@ -181,17 +196,10 @@ fi
 # gate must never use it. perl handles the \x{...} ranges natively.
 # A repo whose posted copy legitimately holds emojis lists those files under "exempt" in
 # docs/EMOJI-GATE.json, each with a line in "reasons". With no file the gate scans every staged file.
-EMOJI_EXEMPT="$(git show ":docs/EMOJI-GATE.json" 2>/dev/null | tr '\n' ' ' \
-  | sed -n 's/.*"exempt"[[:space:]]*:[[:space:]]*\[\([^]]*\)\].*/\1/p' \
-  | grep -o '"[^"]*"' | sed 's/^"//; s/"$//' || true)"
+EMOJI_EXEMPT="$(gate_list docs/EMOJI-GATE.json exempt)"
 if [ -n "$STAGED_FILES" ]; then
   while IFS= read -r file; do
-    emoji_skip=0
-    while IFS= read -r emoji_glob; do
-      [ -n "$emoji_glob" ] || continue
-      case "$file" in $emoji_glob) emoji_skip=1; break ;; esac
-    done <<< "$EMOJI_EXEMPT"
-    [ "$emoji_skip" = 1 ] && continue
+    matches_glob "$file" "$EMOJI_EXEMPT" && continue
     EMOJI_HITS=$(staged_content "$file" 2>/dev/null | perl -CSD -ne 'print "$.: $_" if /'"$EMOJI_PATTERN"'/' || true)
     if [ -n "$EMOJI_HITS" ]; then
       echo "$EMOJI_HITS"
@@ -210,9 +218,7 @@ GATE_NAME="PII"
 # A repo whose own files must hold a pattern, such as a gate that names the patterns it blocks, lists
 # those files under "exempt" in docs/PII-GATE.json, each with a line in "reasons".
 echo "[pre-commit] Gate 3/9: PII scan..."
-PII_EXEMPT="$(git show ":docs/PII-GATE.json" 2>/dev/null | tr '\n' ' ' \
-  | sed -n 's/.*"exempt"[[:space:]]*:[[:space:]]*\[\([^]]*\)\].*/\1/p' \
-  | grep -o '"[^"]*"' | sed 's/^"//; s/"$//' || true)"
+PII_EXEMPT="$(gate_list docs/PII-GATE.json exempt)"
 
 PII_PATTERNS=(
   '(^|[^[:alnum:]._/-])/Users/[A-Za-z0-9._-]+([/"'\'' ]|$)'                   # macOS home directory paths, with or without a trailing slash
@@ -226,12 +232,7 @@ for pattern in "${PII_PATTERNS[@]}"; do
       case "$file" in
         *.env.example|*/mocks/*|*.mock.*|*_mock.*|tests/*|*/tests/*|*.test.*|*_test.*|*__tests__*|.gitignore|docs/PII-GATE.json|.githooks/*) continue ;;
       esac
-      pii_skip=0
-      while IFS= read -r pii_glob; do
-        [ -n "$pii_glob" ] || continue
-        case "$file" in $pii_glob) pii_skip=1; break ;; esac
-      done <<< "$PII_EXEMPT"
-      [ "$pii_skip" = 1 ] && continue
+      matches_glob "$file" "$PII_EXEMPT" && continue
       # Strip known non-PII strings before matching. `git@github.com` is the SSH form npm
       # writes into package-lock.json for a git dependency, a protocol user on a public host,
       # so a lockfile with a git dependency stays committable.
@@ -470,14 +471,15 @@ GATE_NAME="Owner identifiers"
 # paths below and the "localData" globs in docs/IDENTIFIER-GATE.json, each declared with a
 # reason. Fewer than one derivable identifier skips the gate.
 echo "[pre-commit] Gate 8/9: Owner identifiers..."
-ID_CONFIG="$(git show ":docs/IDENTIFIER-GATE.json" 2>/dev/null || true)"
-id_array() {
-  printf '%s\n' "$ID_CONFIG" | tr '\n' ' ' \
-    | sed -n 's/.*"'"$1"'"[[:space:]]*:[[:space:]]*\[\([^]]*\)\].*/\1/p' \
-    | grep -o '"[^"]*"' | sed 's/^"//; s/"$//' || true
-}
 ID_LIST="$(mktemp "${TMPDIR:-/tmp}/oc-identifiers.XXXXXX")"
 trap 'rc=$?; rm -f "$ID_LIST"; log_failure $rc' EXIT
+# The origin's owner/repo path, from an https or ssh remote.
+ID_ORIGIN="$(git remote get-url origin 2>/dev/null || true)"
+case "$ID_ORIGIN" in
+  *://*) ID_ORIGIN="${ID_ORIGIN#*://}"; ID_ORIGIN="${ID_ORIGIN#*/}" ;;
+  *:*) ID_ORIGIN="${ID_ORIGIN#*:}" ;;
+  *) ID_ORIGIN="" ;;
+esac
 {
   git log --format='%an%x09%ae' 2>/dev/null | sort -u | while IFS="$(printf '\t')" read -r id_name id_mail; do
     id_name_lc="$(printf '%s' "$id_name" | tr 'A-Z' 'a-z')"
@@ -494,14 +496,8 @@ trap 'rc=$?; rm -f "$ID_LIST"; log_failure $rc' EXIT
       *@*) printf '%s\n' "${id_mail_lc%@*}" | sed 's/+.*//' ;;
     esac
   done
-  id_remote="$(git remote get-url origin 2>/dev/null || true)"
-  case "$id_remote" in
-    *://*) id_remote="${id_remote#*://}"; id_remote="${id_remote#*/}" ;;
-    *:*) id_remote="${id_remote#*:}" ;;
-    *) id_remote="" ;;
-  esac
-  printf '%s\n' "${id_remote%%/*}" | tr 'A-Z' 'a-z'
-  id_array configGlobs | while IFS= read -r id_glob; do
+  printf '%s\n' "${ID_ORIGIN%%/*}" | tr 'A-Z' 'a-z'
+  gate_list docs/IDENTIFIER-GATE.json configGlobs | while IFS= read -r id_glob; do
     git ls-files | while IFS= read -r id_cfg; do
       case "$id_cfg" in $id_glob) git show ":$id_cfg" 2>/dev/null ;; esac
     done
@@ -518,13 +514,7 @@ else
   ID_SELF="$(mktemp "${TMPDIR:-/tmp}/oc-identifier-self.XXXXXX")"
   trap 'rc=$?; rm -f "$ID_LIST" "$ID_SELF"; log_failure $rc' EXIT
   {
-    id_self_remote="$(git remote get-url origin 2>/dev/null || true)"
-    id_self_remote="${id_self_remote%.git}"
-    case "$id_self_remote" in
-      *://*) id_self_path="${id_self_remote#*://}"; id_self_path="${id_self_path#*/}" ;;
-      *:*) id_self_path="${id_self_remote#*:}" ;;
-      *) id_self_path="" ;;
-    esac
+    id_self_path="${ID_ORIGIN%.git}"
     printf '%s\n' "$id_self_path" "${id_self_path##*/}"
     git show ":package.json" 2>/dev/null | python3 -c 'import json,sys
 try: print(json.load(sys.stdin).get("name",""))
@@ -539,19 +529,14 @@ for number, line in enumerate(sys.stdin, 1):
         line = re.sub(re.escape(own), " ", line, flags=re.I)
     for match in (pattern.finditer(line) if pattern else []):
         print(f"{number}:{match.group(0)}")'
-  ID_LOCAL="$(id_array localData)"
+  ID_LOCAL="$(gate_list docs/IDENTIFIER-GATE.json localData)"
   ID_HITS=0
   while IFS= read -r id_file; do
     [ -n "$id_file" ] || continue
     case "$id_file" in
       .secrets/*|scratch/*|.githooks/*|docs/backlog-config.json|docs/IDENTIFIER-GATE.json) continue ;;
     esac
-    id_skip=0
-    while IFS= read -r id_glob; do
-      [ -n "$id_glob" ] || continue
-      case "$id_file" in $id_glob) id_skip=1; break ;; esac
-    done <<< "$ID_LOCAL"
-    [ "$id_skip" = 1 ] && continue
+    matches_glob "$id_file" "$ID_LOCAL" && continue
     # grep finds the candidates fast and reads the whole file, so the reader never gets SIGPIPE; python re-reads only a file
     # that has a candidate, with the project's own names removed.
     id_found="$(staged_content "$id_file" 2>/dev/null | grep -iwF -f "$ID_LIST" >/dev/null && staged_content "$id_file" 2>/dev/null | python3 -c "$ID_MATCHER" "$ID_LIST" "$ID_SELF" || true)"
