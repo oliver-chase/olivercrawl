@@ -50,7 +50,7 @@ fi
 # An owner opts a repo out by creating .githooks/commit-msg.optout. The hook never creates it,
 # and every commit it lets through says so.
 if [ -e "$HOOK_DIR/commit-msg.optout" ]; then
-  echo "[commit-msg] Story reference check is off: $HOOK_DIR/commit-msg.optout exists."
+  echo "[commit-msg] Every commit-msg check is off (story, voice, test and size cap): $HOOK_DIR/commit-msg.optout exists."
   exit 0
 fi
 
@@ -113,10 +113,11 @@ if [ -n "$BAD_COAUTHOR" ]; then
   exit 1
 fi
 
-# Merge, revert and autosquash commits carry the message of work that already has a reference.
+# Revert and autosquash commits carry the message of work that already has a reference, and a real merge is
+# known by MERGE_HEAD, so a subject that only starts with "Merge" still passes every check.
 # The first commit of a repo has no story to name yet.
 case "$SUBJECT" in
-  "Merge "*|"Revert "*|"fixup! "*|"squash! "*|"amend! "*) exit 0 ;;
+  "Revert "*|"fixup! "*|"squash! "*|"amend! "*) exit 0 ;;
 esac
 if git rev-parse -q --verify MERGE_HEAD >/dev/null 2>&1; then
   exit 0
@@ -157,8 +158,8 @@ fi
 # scripts/ named check-* or live-check*, which is itself the test it runs. An .html page is markup and
 # does not count: script worth a test belongs in a .js file, which does.
 TEST_PATH='(^|/)tests?/|(^|/)test_[^/]*$|_test\.[^/]*$|\.test\.[^/]*$|^scripts/(live-check|check-)[^/]*$'
-CODE_CHANGED="$(git diff --cached --name-only --diff-filter=AM | grep -E '\.(py|sh|js|mjs|ts|tsx)$' | grep -vE "$TEST_PATH" || true)"
-TEST_CHANGED="$(git diff --cached --name-only --diff-filter=AMD | grep -E "$TEST_PATH" || true)"
+CODE_CHANGED="$(git diff --cached --name-only --no-renames --diff-filter=AM | grep -E '\.(py|sh|js|mjs|ts|tsx)$' | grep -vE "$TEST_PATH" || true)"
+TEST_CHANGED="$(git diff --cached --name-only --no-renames --diff-filter=AMD | grep -E "$TEST_PATH" || true)"
 if [ -n "$CODE_CHANGED" ] && [ -z "$TEST_CHANGED" ] \
     && ! printf '%s\n' "$MESSAGE" | grep -Eiq '^[[:space:]]*no test:[[:space:]]*[^[:space:]]'; then
   echo "[commit-msg] BLOCKED: this commit changes code and no test:"
@@ -167,8 +168,7 @@ if [ -n "$CODE_CHANGED" ] && [ -z "$TEST_CHANGED" ] \
   exit 1
 fi
 
-# STORY-EXISTS-1. A number must name a story that exists. #165 cited in a repo whose board stops at #40
-# passed the check above, so the hook asks GitHub about each reference: a plain #N is looked up in the repo
+# STORY-EXISTS-1. A number must name a story that exists, so the hook asks GitHub about each reference: a plain #N is looked up in the repo
 # named by docs/backlog-config.json (repoOwner, repoName), and owner/repo#N in the repo it spells out.
 # A yes is cached in .git/story-exists-cache so later commits skip the call. A repo without the config is
 # not checked, and one that still holds the shipped placeholders says how to fill it. When gh is missing or the call fails for any reason but a 404 (offline, rate limit, no

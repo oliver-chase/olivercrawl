@@ -18,7 +18,7 @@ fi
 if [ "${OLIVERCODE_SCAN_TREE:-}" = 1 ]; then
   STAGED_FILES=$(git -C "$REPO_ROOT" -c core.quotepath=off ls-files)
 else
-  STAGED_FILES=$(git -C "$REPO_ROOT" -c core.quotepath=off diff --cached --name-only --diff-filter=ACM)
+  STAGED_FILES=$(git -C "$REPO_ROOT" -c core.quotepath=off diff --cached --name-only --no-renames --diff-filter=ACM)
 fi
 cd "$REPO_ROOT"
 
@@ -27,7 +27,7 @@ cd "$REPO_ROOT"
 # the staged content, because the working copy can hold something else by the time the commit lands.
 # A path that is not in the index falls back to the working copy.
 # Every staged file is written once into a snapshot folder, so the gates read plain files and never start
-# one `git show` per file per gate. That cost made a tree scan of 200 files run for minutes.
+# one `git show` per file per gate.
 OC_SNAPSHOT="$(mktemp -d "${TMPDIR:-/tmp}/oc-staged.XXXXXX")"
 printf '%s\n' "$STAGED_FILES" | sed '/^$/d' \
   | git -C "$REPO_ROOT" checkout-index --prefix="$OC_SNAPSHOT/" --stdin >/dev/null 2>&1 || true
@@ -97,7 +97,7 @@ SECRET_PATTERNS=(
   'AIza[0-9A-Za-z_-]{35}'                      # Google API key
   'npm_[0-9A-Za-z]{36}'                        # npm access token
   '-----BEGIN [A-Z ]*PRIVATE KEY-----'         # Private keys (RSA/EC/DSA/OPENSSH/PKCS8) — matches "BEGIN <TYPE> PRIVATE KEY"
-  '(TOKEN|SECRET|KEY|PASSWORD|PASSWD|API_?KEY|ACCESS_?KEY|PRIVATE_?KEY|AUTH|CREDENTIAL|token|secret|key|password|passwd|api_?key|access_?key|auth|credential|[Pp]assword|[Tt]oken|[Ss]ecret|[Aa]pi[Kk]ey|[Aa]ccess[Kk]ey|[Cc]redential)["'\'':= ]+[A-Za-z0-9]{20,}'  # Secret-named var assigned a 20+ char alphanumeric value (a bare hex-blob pattern false-positives on every git SHA/lockfile hash)
+  '(TOKEN|SECRET|KEY|PASSWORD|PASSWD|API_?KEY|ACCESS_?KEY|PRIVATE_?KEY|AUTH|CREDENTIAL|token|secret|key|password|passwd|api_?key|access_?key|auth|credential|[Pp]assword|[Tt]oken|[Ss]ecret|[Aa]pi[Kk]ey|[Aa]ccess[Kk]ey|[Cc]redential)["'\'':= ]+[A-Za-z0-9!@#$%^&*_+/=~-]{20,}'  # Secret-named var assigned a 20+ char value; symbols count, code punctuation such as . ( ) [ ] does not (a bare hex-blob pattern false-positives on every git SHA/lockfile hash)
 )
 
 # secret_filter PATTERN: reads `grep -n` hits on stdin and prints those that hold a real secret.
@@ -206,7 +206,7 @@ echo "  Gate 2 passed."
 
 # ─── Gate 3: PII ──────────────────────────────────────────────────────────────
 GATE_NAME="PII"
-# Block commits containing personal identifiers: home paths, usernames, hostnames.
+# Block commits containing personal identifiers: home folder paths and email addresses.
 # A repo whose own files must hold a pattern, such as a gate that names the patterns it blocks, lists
 # those files under "exempt" in docs/PII-GATE.json, each with a line in "reasons".
 echo "[pre-commit] Gate 3/9: PII scan..."
@@ -215,8 +215,8 @@ PII_EXEMPT="$(git show ":docs/PII-GATE.json" 2>/dev/null | tr '\n' ' ' \
   | grep -o '"[^"]*"' | sed 's/^"//; s/"$//' || true)"
 
 PII_PATTERNS=(
-  '/Users/[A-Za-z0-9._-]+/'                              # macOS home directory paths
-  '/home/[A-Za-z0-9._-]+/'                                # Linux home directory paths
+  '(^|[^[:alnum:]._/-])/Users/[A-Za-z0-9._-]+([/"'\'' ]|$)'                   # macOS home directory paths, with or without a trailing slash
+  '(^|[^[:alnum:]._/-])/home/[A-Za-z0-9._-]+([/"'\'' ]|$)'                    # Linux home directory paths
   '[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'  # Email addresses (any domain)
 )
 
@@ -224,7 +224,7 @@ for pattern in "${PII_PATTERNS[@]}"; do
   if [ -n "$STAGED_FILES" ]; then
     while IFS= read -r file; do
       case "$file" in
-        *.env.example|*mock*|tests/*|*/tests/*|*.test.*|*_test.*|*__tests__*|.gitignore|docs/PII-GATE.json|.githooks/*) continue ;;
+        *.env.example|*/mocks/*|*.mock.*|*_mock.*|tests/*|*/tests/*|*.test.*|*_test.*|*__tests__*|.gitignore|docs/PII-GATE.json|.githooks/*) continue ;;
       esac
       pii_skip=0
       while IFS= read -r pii_glob; do
@@ -348,9 +348,8 @@ GATE_NAME="Skill citations"
 # GATE-SCOPE-1: matched by path shape (`*/SKILL.md`, `*/CLAUDE.md`, `*/references/*.md`),
 # never by bare filename, so a reference file gets the same check as a skill file.
 #
-# GATE-CITATION-1: a staged skill file can cite `#N` as a real GitHub issue
-# that was never filed -- two commits did exactly this before anything
-# caught it. Checked only when `gh` is installed and already authenticated;
+# GATE-CITATION-1: a staged skill file cannot cite `#N` as a GitHub issue or pull request that does not exist.
+# Checked only when `gh` is installed and already authenticated;
 # any network, auth, or rate-limit problem skips the check silently rather
 # than blocking a commit on infrastructure the content gate does not own.
 echo "[pre-commit] Gate 6/9: Skill citations..."
@@ -369,11 +368,13 @@ $hits"
 fi
 CITED_NUMS=$(printf '%s\n' "$CITED_NUMS" | grep -E '^[0-9]+$' | sort -un || true)
 if [ -n "$CITED_NUMS" ] && command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
-  ALL_ISSUES=$(cd "$REPO_ROOT" && gh issue list --state all --limit 5000 --json number --jq '.[].number' 2>/dev/null) || ALL_ISSUES=""
+  # Issues and pull requests share one number space, and a skill may cite either.
+  ALL_ISSUES=$(cd "$REPO_ROOT" && { gh issue list --state all --limit 5000 --json number --jq '.[].number' && gh pr list --state all --limit 5000 --json number --jq '.[].number'; } 2>/dev/null) || ALL_ISSUES=""
   if [ -n "$ALL_ISSUES" ]; then
     while IFS= read -r n; do
       [ -z "$n" ] && continue
-      if ! printf '%s\n' "$ALL_ISSUES" | grep -qx "$n"; then
+      # A here-string, since grep -q in a pipe ends early and pipefail then reads the writer's SIGPIPE as a miss.
+      if ! grep -qx "$n" <<< "$ALL_ISSUES"; then
         echo "  BLOCKED: #$n is cited in a staged skill file but resolves to no real issue."
         CITATION_FAILED=1
       fi
