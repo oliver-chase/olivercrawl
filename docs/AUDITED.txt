@@ -5,7 +5,7 @@ e04ffd33e8547c3b1d8e67745ee75d190bdc4394 .githooks/pre-commit
 f1a906c620244ff09ee82e6a56e6622d0f5c77b6 .githooks/pre-push
 f4e9b02bc7f7f873017011286cc1556987ed329d .github/workflows/check.yml
 139c7037c3f9bfab1b35b3a85f36d119be953a7b .gitignore
-145674170255484d44af953b6118dc04dff164ad CHANGELOG.md
+a55c3c9ac7a5337edbd5e501b79f6f5ebe0c02b5 CHANGELOG.md
 1f4bc10e2347e644698ab651265aef2cb596c183 CLAUDE.md
 0e513eaf6c590bdaddaafe6b0d551bedd4acff47 LICENSE
 a50bbfbfd01799ce9f13e49743780bfd7da11e1f QUALITY_BASELINE.md
@@ -59,7 +59,7 @@ e5991a14e9dfe2ec1a124c617ff0bc58d1804677 src/crawl-host-stats.ts
 29c5024a75bbf6cadc14ce136348769256f6f17b src/crawl-seeds.ts
 d709d46e0229ed6c2e6d44ebc8ac123d7ae2b241 src/crawl-session.ts
 7cc5e9c83d52090fb8e7527af896576c94a4caba src/crawl-site-types.ts
-dc9258607397021ddd4322d1b128d2fe58ff3ec4 src/crawl-site.ts
+841fe32f8089922ead684fb0e53cc56c151a4ba0 src/crawl-site.ts
 1dab56770ace1fbbf56b16ac5a2f495070960b3d src/crawl-store.ts
 4154efdefd4aa66db23a229c99f805d284ecb8e8 src/extract/content-diff.ts
 dfcd5e4dcc3a54f7a22b98025a7722ba7bbe79f6 src/extract/content-images.ts
@@ -85,7 +85,7 @@ afc29c1349406531a48f15b493bea0be1171c47f src/fetch/safe-fetch.ts
 54c07548eff2911791aea97ba22a8f196935af4d src/fetch/sitemap-discovery.ts
 26e6f474cb2782a6e6b9c8796acf13ffc88f7ba5 src/fetch/wayback-fetch.ts
 798f911c8835496eacfe76afb40d8949f7d7d32b src/guard/prompt-injection-guard.ts
-177b5896be83edd511e728c30dc2e43e46db6128 src/index.ts
+328f7b287cbfbfb2565cd5ed105b0bbac8fa7139 src/index.ts
 0293c930a016b27aea99d5e58872df8fc857be5a src/lanes/own/fallback-rungs.ts
 be3f78b12c12bbe983533b36a1963e4c12b61c5a src/lanes/own/index.ts
 fce082d9d5c298d17163e66004c725a4fff495a6 src/lanes/own/origin-moved.ts
@@ -189,7 +189,7 @@ e0e4844abb0b882aec2cb9542bf7b682a92ba206 tests/lanes/content-kinds.test.ts
 bc6ef33b58afbbe8cd47a791a30c1d763eb5ccd2 tests/lanes/crawl-guarantees.test.ts
 9908a03cf2ece269452c53bf40f05f134c042891 tests/lanes/crawl-resume.test.ts
 5a0a2add7dd9d8fcdf8fc5ea63c71eb36513e8c7 tests/lanes/crawl-site-recrawl.test.ts
-081816db286e42848ce30d34efd75c9267e85889 tests/lanes/crawl-site.test.ts
+9c9a24443624b3776526548286d41c108e9630de tests/lanes/crawl-site.test.ts
 1511868f4369f63af05076b9dbdca984a2ebf605 tests/lanes/crawl-store.test.ts
 339ea7020af4d0d0c0f89566edfae46976c5e61c tests/lanes/crawlsite-autorobots.test.ts
 b163450bb63ef73ca0ca8407ec71a1baf27a36f3 tests/lanes/free-lane-independence.test.ts
