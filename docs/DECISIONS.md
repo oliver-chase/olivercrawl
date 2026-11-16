@@ -72,7 +72,7 @@ wrong the moment one changes.
 | `JSONLD-SIGNAL-1` | Report whether structured data is about the CONTENT. `jsonLd.length > 0` is a misleading test. | `core/types.ts` | `extract/structured-summary.test.ts` |
 | `LADDER-QUALITY-1` | A bot-wall interstitial is a rung failure. Accepting it beat the rung holding the real page. | `core/block-page.ts` | `lanes/block-page.test.ts` |
 | `LANE-EXHAUST-1` | Every failure path exhausts the free rungs in one order, defined once. A skipped free rung reaches the paid lane sooner. | `lanes/own/fallback-rungs.ts` | `lanes/lane-exhaustion.test.ts` |
-| `LANE-ONCE-1` | When the remembered rung fails, its ladder has already tried every later rung, so a failed direct fetch does not run the ladder again. | `lanes/own/index.ts` | `lanes/remembered-rung.test.ts` |
+| `LANE-ONCE-1` | When the remembered rung fails, its ladder has already tried every later rung, so a failed direct fetch does not run the ladder again. | `lanes/own/index.ts` | `core/rung-memory.test.ts` |
 | `MARKDOWN-BLOCKLINK-1` | A bare <a> under a container lost its href. Index and results pages produced markdown with no URLs. | `extract/html-to-markdown.ts` | `extract/html-to-markdown.test.ts` |
 | `MARKDOWN-DATAURI-1` | Never emit data: image srcs. A base64 placeholder tripped the injection guard and quarantined ordinary pages. | `extract/html-to-markdown.ts` | `extract/html-to-markdown.test.ts` |
 | `PDF-TIMEOUT-1` | Parsing is time-bounded. The bytes are attacker-supplied and a hostile PDF can send a parser into work that never finishes; a hang is worse than a failure, because nothing reports and nothing retries. | `fetch/pdf-extract.ts` | `fetch/pdf-extract.test.ts` |

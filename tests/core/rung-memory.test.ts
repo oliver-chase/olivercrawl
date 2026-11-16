@@ -182,7 +182,7 @@ describe('a blocked host skips the wasted fetch next time', () => {
     calls.length = 0;
     const second = await crawler.crawl(target, 'https://venue.example.com/two');
     expect(second.ok).toBe(false);
-    // The failing reader rung runs once for this crawl, not once as memory and again on the ladder.
+    // LANE-ONCE-1: the failing reader rung runs once for this crawl, and the ladder does not repeat it.
     expect(calls.filter((c) => c === 'jina')).toHaveLength(1);
 
     // The failed memory is forgotten, so the ladder starts from the plain fetch again.
