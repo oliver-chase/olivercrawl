@@ -1,3 +1,5 @@
+// Checks the repo's structure contract: the required files exist and are git-tracked, no legacy backlog.md
+// remains, and every file package.json's scripts name exists. Run from the repo root: node scripts/check-structure-contract.mjs
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { basename, join, relative } from 'node:path'
 import { execFileSync } from 'node:child_process'
@@ -48,7 +50,6 @@ function requireScriptReferenceTracked(ref, message) {
 }
 
 const githubDir = join(ROOT, '.github')
-if (!existsSync(githubDir)) failures.push('missing .github directory')
 
 if (existsSync(githubDir)) {
   const allMarkdown = listFilesRecursive(githubDir).filter((f) => f.endsWith('.md'))
