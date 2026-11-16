@@ -36,6 +36,7 @@ import { releaseHostSlot, sleep, tryAcquireHostSlot } from './core/host-throttle
 import { assertRequestUrlAllowed, assertTargetEligible } from './fetch/host-policy.js';
 import type { Crawler } from './index.js';
 import { DEFAULT_MAX_PAGES } from './core/types.js';
+import { runPool } from './core/run-pool.js';
 import type { CrawlPage, CrawlTarget } from './core/types.js';
 import type { CrawlProgress, HostStats, MultiSiteOptions, MultiSiteResult, SiteCrawlFailure, SiteCrawlOptions, SiteCrawlResult } from './crawl-site-types.js';
 
@@ -348,7 +349,6 @@ export async function crawlSite(
   return done(queue.length > 0 && budgetHit);
 }
 
-
 /**
  * Crawl many targets in parallel, returning one result per target in input order.
  *
@@ -362,18 +362,11 @@ export async function crawlSites(
   targets: CrawlTarget[],
   options: MultiSiteOptions = {},
 ): Promise<MultiSiteResult[]> {
-  const width = Math.max(1, Math.floor(options.siteConcurrency ?? 4));
   const results: MultiSiteResult[] = new Array(targets.length);
   // Identity, seeds and resume state belong to one target, so they never reach the others.
   const { targetId: _id, storeKey: _key, resumeFrom: _resume, seeds: _seeds, ...shared } = options as SiteCrawlOptions & MultiSiteOptions;
-  let cursor = 0;
-  const worker = async () => {
-    while (cursor < targets.length) {
-      const index = cursor++;
-      const target = targets[index]!;
-      results[index] = { target, result: await crawlSite(crawler, target, shared) };
-    }
-  };
-  await Promise.all(Array.from({ length: Math.min(width, targets.length) }, worker));
+  await runPool(targets, options.siteConcurrency ?? 4, async (target, index) => {
+    results[index] = { target, result: await crawlSite(crawler, target, shared) };
+  });
   return results;
 }

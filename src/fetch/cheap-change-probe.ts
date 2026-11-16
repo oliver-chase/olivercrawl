@@ -30,8 +30,6 @@ export type CheapChangeSignal = {
   bodyHash: string | null;
 };
 
-
-
 const PROBE_TIMEOUT_MS = 8_000;
 const PROBE_MAX_REDIRECTS = 4;
 const PROBE_MAX_BODY_BYTES = 200_000; // enough to hash a shell page
@@ -63,8 +61,7 @@ export async function probeCheapChangeSignal(
     return null;
   }
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), PROBE_TIMEOUT_MS);
+  const signal = AbortSignal.timeout(PROBE_TIMEOUT_MS);
 
   try {
     // Redirects are followed by hand, each hop validated same-site https and publicly resolved
@@ -73,7 +70,7 @@ export async function probeCheapChangeSignal(
     const walk = await followManualRedirects(safeUrl, {
       doFetch: pooledFetchFor(opts?.dnsLookup),
       maxHops: PROBE_MAX_REDIRECTS,
-      init: () => ({ method: 'GET', headers: { 'User-Agent': DEFAULT_USER_AGENT }, signal: controller.signal }),
+      init: () => ({ method: 'GET', headers: { 'User-Agent': DEFAULT_USER_AGENT }, signal }),
       onRedirect: async (location, from) => {
         const next = assertRedirectUrlAllowed(source, new URL(location, from).toString());
         await assertHostResolvesToPublicAddress(next.hostname, opts?.dnsLookup);
@@ -110,8 +107,6 @@ export async function probeCheapChangeSignal(
     return { etag, lastModified, bodyHash };
   } catch {
     return null;
-  } finally {
-    clearTimeout(timeoutId);
   }
 }
 

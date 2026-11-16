@@ -15,6 +15,7 @@
 // only on SUCCESS — a transient resolver failure must not be able to poison
 // a host permanently.
 
+import { rememberBounded } from '../core/bounded-map.js';
 import { getIpVersion, isBlockedHostname, isPrivateIpv4, isPrivateIpv6 } from '../core/net-address.js';
 import type { CrawlTarget, DnsAddress, DnsLookupFn } from '../core/types.js';
 
@@ -74,12 +75,8 @@ const MAX_RESOLVERS = 64;
 function scopedMap<V>(root: Map<DnsLookupFn, Map<string, V>>, lookupFn: DnsLookupFn): Map<string, V> {
   let scoped = root.get(lookupFn);
   if (!scoped) {
-    if (root.size >= MAX_RESOLVERS) {
-      const oldest = root.keys().next().value;
-      if (oldest !== undefined) root.delete(oldest);
-    }
     scoped = new Map();
-    root.set(lookupFn, scoped);
+    rememberBounded(root, lookupFn, scoped, MAX_RESOLVERS);
   }
   return scoped;
 }

@@ -190,17 +190,10 @@ export async function discoverSitemapUrls(
 ): Promise<SitemapDiscoveryResult> {
   const maxUrls = Math.max(1, options.maxUrls ?? DEFAULT_MAX_URLS);
 
-  let sitemapUrl: URL;
-  try {
-    const base = new URL(target.baseUrl);
-    sitemapUrl = new URL('/sitemap.xml', base.origin);
-    await assertHostResolvesToPublicAddress(sitemapUrl.hostname, options.dnsLookup);
-  } catch (error) {
-    return { urls: [], entries: [], truncated: false, reason: error instanceof Error ? error.message : String(error) };
-  }
-
   let root: { xml: string; capped: boolean } | null;
   try {
+    const sitemapUrl = new URL('/sitemap.xml', new URL(target.baseUrl).origin);
+    await assertHostResolvesToPublicAddress(sitemapUrl.hostname, options.dnsLookup);
     root = await fetchXml(sitemapUrl.toString(), { ...options, sameSiteAs: target.baseUrl });
   } catch (error) {
     return { urls: [], entries: [], truncated: false, reason: error instanceof Error ? error.message : String(error) };

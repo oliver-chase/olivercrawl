@@ -37,43 +37,13 @@ export function parseRetryAfter(value: string | null): number | undefined {
  * char cap protects the LLM; this protects the crawler.
  */
 export async function readBodyCapped(response: Response, maxBytes: number): Promise<string> {
-  const contentType = response.headers.get('content-type');
-  const reader = response.body?.getReader();
-  if (!reader) {
-    // Runtime without streaming bodies — fall back, but refuse an announced
-    // oversize without buffering it.
-    const announced = Number(response.headers.get('content-length') || 0);
-    if (announced > maxBytes) throw new Error(`Response too large: content-length ${announced} > ${maxBytes}`);
-    const buffer = new Uint8Array(await response.arrayBuffer());
-    return decodeBody(buffer, contentType);
-  }
-
-  const chunks: Uint8Array[] = [];
-  let received = 0;
-  try {
-    while (received < maxBytes) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      if (value) {
-        chunks.push(value);
-        received += value.byteLength;
-      }
-    }
-  } finally {
-    reader.cancel().catch(() => {});
-  }
-
-  const merged = new Uint8Array(Math.min(received, maxBytes));
-  let offset = 0;
-  for (const chunk of chunks) {
-    const room = merged.byteLength - offset;
-    if (room <= 0) break;
-    merged.set(room >= chunk.byteLength ? chunk : chunk.subarray(0, room), offset);
-    offset += Math.min(chunk.byteLength, room);
-  }
+  // Runtime without streaming bodies: an announced oversize is refused without buffering it.
+  const announced = Number(response.headers.get('content-length') || 0);
+  if (!response.body && announced > maxBytes) throw new Error(`Response too large: content-length ${announced} > ${maxBytes}`);
+  const { bytes } = await readBytesPrefix(response, maxBytes);
   // Decode with the origin's declared charset; core/charset.ts explains why
   // assuming UTF-8 corrupts data silently.
-  return decodeBody(merged, contentType);
+  return decodeBody(bytes, response.headers.get('content-type'));
 }
 
 /**

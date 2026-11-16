@@ -18,7 +18,6 @@ import type { AnyNode } from 'domhandler';
 import { CHROME_SELECTOR, isInputForm, selectMainRegion } from './main-region.js';
 import { isSafeHttpUrl } from '../core/url-safety.js';
 
-
 /** Escape the characters that would otherwise be read as markdown syntax. */
 function escapeInline(text: string): string {
   return text.replace(/([\\`*_[\]])/g, '\\$1');
@@ -215,7 +214,7 @@ function renderNode($: CheerioAPI, $el: Cheerio<AnyNode>, el: AnyNode, blocks: s
       // A block-level image outside any paragraph. Common for flyers,
       // and its alt text is often the only description of the event — the
       // default branch would recurse into a childless node and emit nothing.
-      const rendered = inlineImage($, $el);
+      const rendered = inlineImage($el);
       if (rendered) blocks.push(rendered);
       return;
     }
@@ -269,7 +268,7 @@ function renderList($: CheerioAPI, $list: Cheerio<AnyNode>, depth: number): stri
  * carries no information a consumer can use. The alt text is kept, since it
  * is frequently the only description of the image.
  */
-function inlineImage($: CheerioAPI, $img: Cheerio<AnyNode>): string {
+function inlineImage($img: Cheerio<AnyNode>): string {
   const alt = ($img.attr('alt') || '').trim();
   const rawSrc = ($img.attr('src') || '').trim();
   // Prefer the real URL a lazy-loader parked in data-src over its placeholder.
@@ -311,7 +310,7 @@ function inlineNodes($: CheerioAPI, nodes: Cheerio<AnyNode>): string {
       case 'img': {
         // Alt text is often the ONLY description of a flyer image, and event
         // pages lean on it heavily — keep it and do not drop the node.
-        parts.push(inlineImage($, $node));
+        parts.push(inlineImage($node));
         return;
       }
       case 'strong':

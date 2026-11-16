@@ -20,6 +20,7 @@
 import type { Crawler } from './index.js';
 import type { CrawlOptions, CrawlPage } from './core/types.js';
 import type { SearchResult } from './search/index.js';
+import { runPool } from './core/run-pool.js';
 
 export type SearchAndCrawlOptions = CrawlOptions & {
   /** How many search results to take. Default 3. */
@@ -102,19 +103,8 @@ export async function searchAndCrawl(
     else if (!crawled.ok) skipped.push({ url: result.url, reason: crawled.reason, detail: crawled.detail });
   };
 
-  const lanes = Math.max(1, Math.floor(options.concurrency ?? 1));
-  // Fixed pool of workers pulling from a shared queue — bounded memory and bounded in-flight requests
-  // regardless of how many results came back. One worker is the sequential case.
-  const queue = [...found.results];
-  await Promise.all(
-    Array.from({ length: Math.min(lanes, queue.length) }, async () => {
-      for (;;) {
-        const next = queue.shift();
-        if (!next) return;
-        await readOne(next);
-      }
-    }),
-  );
+  // One worker is the sequential case.
+  await runPool(found.results, options.concurrency ?? 1, readOne);
 
   return { ok: true, results: found.results, pages, skipped, provider: found.provider };
 }

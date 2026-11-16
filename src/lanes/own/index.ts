@@ -23,12 +23,11 @@ import { dropBody, parseRetryAfter, readBodyCapped, readBytesCapped, fetchFollow
 import { assertHostResolvesToPublicAddress, DnsLookupError } from '../../fetch/host-policy.js';
 import { emitUsage } from '../../core/usage.js';
 import { throttleHost, recordHostLatency } from '../../core/host-throttle.js';
-import { sanitizeCrawledText } from '../../guard/prompt-injection-guard.js';
 import type { ResolvedConfig } from '../../core/config.js';
 import type { CrawlOptions, CrawlResult, CrawlTarget } from '../../core/types.js';
 import { approveCrawlPolicy, publishedCrawlDelayMs } from './robots-policy.js';
-import { freeFallbackLadder } from './fallback-rungs.js';
-import { hasCredentials, targetHeaders } from './target-headers.js';
+import { freeFallbackLadder, type LadderFlags } from './fallback-rungs.js';
+import { targetHeaders } from './target-headers.js';
 export { ROBOTS_CACHE_TTL_MS, ROBOTS_FAILURE_TTL_MS, publishedCrawlDelayMs, __clearRobotsCacheForTests, resolveTargetPolicy, approveCrawlPolicy } from './robots-policy.js';
 
 /** Crawl a single URL with the own lane. */
@@ -41,14 +40,17 @@ export async function crawlWithOwnLane(
   const maxTextChars = options.maxTextChars ?? config.defaults.maxTextChars;
   const timeoutMs = options.timeoutMs ?? config.defaults.timeoutMs;
   const started = Date.now();
+  const fail = (detail: string): CrawlResult => {
+    emitUsage(config, { lane: 'own', rung: 'fetch', kind: 'fetch', url, ok: false, latencyMs: Date.now() - started, error: detail });
+    return { ok: false, reason: 'empty', detail, lane: 'own' };
+  };
 
   // 1. Policy — every refusal here happens before any content fetch. The
   // shared gate (also run lane-independently by crawl()) plus the own-lane-
   // only DNS check, which protects the socket THIS process is about to open.
   let requestUrl: URL;
   try {
-    const approved = await approveCrawlPolicy(target, url, config);
-    requestUrl = approved.requestUrl;
+    requestUrl = await approveCrawlPolicy(target, url, config);
     await assertHostResolvesToPublicAddress(requestUrl.hostname, config.dnsLookup);
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
@@ -84,18 +86,10 @@ export async function crawlWithOwnLane(
   // LANE-ONCE-1: when the remembered path fails, its ladder has already tried every later rung, so a failure
   // of the direct fetch that follows returns that result and does not run the ladder a second time.
   let spentLadder: CrawlResult | null = null;
-  const ladder = (...args: Parameters<typeof freeFallbackLadder>): Promise<CrawlResult> =>
-    spentLadder ? Promise.resolve(spentLadder) : freeFallbackLadder(...args);
+  const ladder = (priorDetail: string, flags?: LadderFlags): Promise<CrawlResult> =>
+    spentLadder ? Promise.resolve(spentLadder) : freeFallbackLadder(url, config, options, started, priorDetail, target, flags);
   if (config.rungMemory !== false && shouldSkipDirectFetch(config.rungMemoryStore, requestUrl.hostname)) {
-    const viaMemory = await freeFallbackLadder(
-      url,
-      config,
-      options,
-      started,
-      'Direct fetch skipped: this host is known to serve it only via a later rung.',
-      hasCredentials(target),
-      target,
-    );
+    const viaMemory = await ladder('Direct fetch skipped: this host is known to serve it only via a later rung.');
     if (viaMemory.ok) return viaMemory;
     // A quarantined page is a policy decision, so the remembered rung stays and the ladder does not run again.
     if (viaMemory.reason === 'quarantined') return viaMemory;
@@ -120,7 +114,7 @@ export async function crawlWithOwnLane(
     emitUsage(config, { lane: 'own', rung: 'fetch', kind: 'fetch', url, ok: false, latencyMs: Date.now() - started, error: detail });
     // Direct fetch failed — exhaust every remaining FREE rung before giving
     // up (and long before anything paid is considered).
-    return ladder(url, config, options, started, detail, hasCredentials(target), target);
+    return ladder(detail);
   }
 
   // How long the origin took is the input to adaptive pacing.
@@ -150,7 +144,7 @@ export async function crawlWithOwnLane(
     // rungs come BEFORE Jina here (LANE-EXHAUST-1).
     // A 404 or 410 is the origin saying the page is gone, so no live rung can bring it back. Only the archive can.
     const gone = response.status === 404 || response.status === 410;
-    const fallback = await ladder(url, config, options, started, detail, hasCredentials(target), target, false, !gone);
+    const fallback = await ladder(detail, { liveRungs: !gone });
     if (!fallback.ok && retryAfterMs) return { ...fallback, retryAfterMs };
     return fallback;
   }
@@ -161,65 +155,36 @@ export async function crawlWithOwnLane(
     // Still refused: images, video, PDFs, binaries. HTML-parsing a JPEG
     // produces confident nonsense, and a PDF needs a real parser.
     dropBody(response);
-    const detail = `Unsupported content-type: ${contentType || 'unknown'}`;
-    emitUsage(config, { lane: 'own', rung: 'fetch', kind: 'fetch', url, ok: false, latencyMs: Date.now() - started, error: detail });
-    return { ok: false, reason: 'empty', detail, lane: 'own' };
+    return fail(`Unsupported content-type: ${contentType || 'unknown'}`);
   }
   const contentKind = refineKindByUrl(kindRaw, response.url || requestUrl.toString());
+  const pageMeta = {
+    url: response.url || requestUrl.toString(),
+    contentType,
+    rung: 'fetch',
+    etag: response.headers.get('etag'),
+    lastModified: response.headers.get('last-modified'),
+  };
 
   // CRAWL-PDF-1: a PDF is bytes — decoding it as a string first
   // would corrupt it, so it is read and parsed before the text path.
   if (contentKind === 'pdf') {
     // CRAWL-PDF-CAP-1: the same byte cap as the text path, applied before the bytes are parsed.
     const announced = Number(response.headers.get('content-length') || 0);
-    if (announced > config.limits.maxBodyBytes) {
-      const detail = `PDF too large: content-length ${announced} > ${config.limits.maxBodyBytes}`;
-      emitUsage(config, { lane: 'own', rung: 'fetch', kind: 'fetch', url, ok: false, latencyMs: Date.now() - started, error: detail });
-      return { ok: false, reason: 'empty', detail, lane: 'own' };
-    }
+    if (announced > config.limits.maxBodyBytes) return fail(`PDF too large: content-length ${announced} > ${config.limits.maxBodyBytes}`);
     let buffer: Uint8Array;
     try {
       buffer = await readBytesCapped(response, config.limits.maxBodyBytes);
     } catch (error) {
-      const detail = error instanceof Error ? error.message : String(error);
-      emitUsage(config, { lane: 'own', rung: 'fetch', kind: 'fetch', url, ok: false, latencyMs: Date.now() - started, error: detail });
-      return { ok: false, reason: 'empty', detail, lane: 'own' };
+      return fail(error instanceof Error ? error.message : String(error));
     }
     const extracted = await extractPdfText(buffer);
+    if (!extracted.ok) return fail(extracted.detail);
 
-    if (!extracted.ok) {
-      emitUsage(config, { lane: 'own', rung: 'fetch', kind: 'fetch', url, ok: false, latencyMs: Date.now() - started, error: extracted.detail });
-      return { ok: false, reason: 'empty', detail: extracted.detail, lane: 'own' };
-    }
-
-    const sanitizedPdf = sanitizeCrawledText(extracted.text, maxTextChars);
-    if (sanitizedPdf.signals.length > 0) {
-      const detail = 'Prompt-injection signals in PDF content.';
-      emitUsage(config, { lane: 'own', rung: 'guard', kind: 'fetch', url, ok: false, latencyMs: Date.now() - started, error: detail });
-      return {
-        ok: false, reason: 'quarantined', detail, lane: 'own',
-        quarantine: { signals: sanitizedPdf.signals, text: sanitizedPdf.text, title: null },
-      };
-    }
-
+    const pdfPage = await buildTextPage({ ...pageMeta, lane: 'own', maxTextChars, text: extracted.text, contentKind: 'pdf' });
+    if (isQuarantined(pdfPage)) return quarantined(config, url, started, 'Prompt-injection signals in PDF content.', pdfPage);
     emitUsage(config, { lane: 'own', rung: 'fetch', kind: 'fetch', url, ok: true, latencyMs: Date.now() - started, costUsd: 0 });
-    return {
-      ok: true,
-      pages: [
-        await buildTextPage({
-          url: response.url || requestUrl.toString(),
-          text: sanitizedPdf.text,
-          contentKind: 'pdf',
-          contentType,
-          rung: 'fetch',
-          lane: 'own',
-          etag: response.headers.get('etag'),
-          lastModified: response.headers.get('last-modified'),
-          redactionCount: sanitizedPdf.redactionCount,
-          truncated: sanitizedPdf.truncated,
-        }),
-      ],
-    };
+    return { ok: true, pages: [pdfPage] };
   }
 
   const html = await readBodyCapped(response, config.limits.maxBodyBytes);
@@ -230,51 +195,13 @@ export async function crawlWithOwnLane(
   // never did. It still goes through the injection guard: a calendar feed is
   // untrusted remote text exactly like a page is.
   if (contentKind !== 'html') {
-    const sanitizedData = sanitizeCrawledText(html, maxTextChars);
-    if (sanitizedData.signals.length > 0) {
-      const detail = `Prompt-injection signals in ${contentKind} content.`;
-      emitUsage(config, { lane: 'own', rung: 'guard', kind: 'fetch', url, ok: false, latencyMs: Date.now() - started, error: detail });
-      return {
-        ok: false, reason: 'quarantined', detail, lane: 'own',
-        quarantine: { signals: sanitizedData.signals, text: sanitizedData.text, title: null },
-      };
-    }
-    if (!sanitizedData.text.trim()) {
-      const detail = `Empty ${contentKind} document`;
-      emitUsage(config, { lane: 'own', rung: 'fetch', kind: 'fetch', url, ok: false, latencyMs: Date.now() - started, error: detail });
-      return { ok: false, reason: 'empty', detail, lane: 'own' };
-    }
-
+    const dataPage = await buildTextPage({ ...pageMeta, lane: 'own', maxTextChars, text: html, contentKind, bodySource: html });
+    if (isQuarantined(dataPage)) return quarantined(config, url, started, `Prompt-injection signals in ${contentKind} content.`, dataPage);
+    if (!dataPage.text.trim()) return fail(`Empty ${contentKind} document`);
     emitUsage(config, { lane: 'own', rung: 'fetch', kind: 'fetch', url, ok: true, latencyMs: Date.now() - started, costUsd: 0 });
-    return {
-      ok: true,
-      pages: [
-        await buildTextPage({
-          url: response.url || requestUrl.toString(),
-          text: sanitizedData.text,
-          contentKind,
-          contentType,
-          rung: 'fetch',
-          lane: 'own',
-          etag: response.headers.get('etag'),
-          lastModified: response.headers.get('last-modified'),
-          bodySource: html,
-          redactionCount: sanitizedData.redactionCount,
-          truncated: sanitizedData.truncated,
-        }),
-      ],
-    };
+    return { ok: true, pages: [dataPage] };
   }
-  const page = await buildRungPage(config, options, {
-      url: response.url || requestUrl.toString(),
-      html,
-      contentType,
-      etag: response.headers.get('etag'),
-      lastModified: response.headers.get('last-modified'),
-      baseHost: requestUrl.hostname,
-      maxTextChars,
-      rung: 'fetch',
-    });
+  const page = await buildRungPage(config, options, { ...pageMeta, html, baseHost: requestUrl.hostname });
 
   if (isQuarantined(page)) {
     const detail = 'Content tripped the prompt-injection guard and was quarantined.';
@@ -286,7 +213,7 @@ export async function crawlWithOwnLane(
     // BODY-RECEIVED-1: an origin DID answer here — the page simply had no
     // readable text. The ladder's later rungs cannot know that, so it is
     // recorded now, with no inference from wording afterwards.
-    return ladder(url, config, options, started, 'No visible text in the served HTML', hasCredentials(target), target, true);
+    return ladder('No visible text in the served HTML', { bodyReceived: true });
   }
 
   // THIN-PAGE-1: the page parsed and has text, but too little of it. A
@@ -295,16 +222,9 @@ export async function crawlWithOwnLane(
   // Only runs when a caller sets a threshold — see renderWhenTextBelow.
   const thinThreshold = config.renderWhenTextBelow ?? 0;
   if (thinThreshold > 0 && page.text.trim().length < thinThreshold) {
-    const rendered = await ladder(
-      url,
-      config,
-      options,
-      started,
-      `Fetched page had only ${page.text.trim().length} characters (threshold ${thinThreshold})`,
-      hasCredentials(target),
-      target,
-      true,
-    );
+    const rendered = await ladder(`Fetched page had only ${page.text.trim().length} characters (threshold ${thinThreshold})`, {
+      bodyReceived: true,
+    });
     // Keep the thin page if nothing better came back — it is still the page.
     if (rendered.ok && !rendered.notModified && (rendered.pages[0]?.text.length ?? 0) > page.text.length) {
       return rendered;
@@ -315,7 +235,7 @@ export async function crawlWithOwnLane(
   // is the wall — treat it exactly like the 403 form of the
   // same wall and try the rungs that clear it.
   if (looksLikeBlockPage(page.text)) {
-    return ladder(url, config, options, started, 'Served a bot-wall interstitial (HTTP 200)', hasCredentials(target), target, true);
+    return ladder('Served a bot-wall interstitial (HTTP 200)', { bodyReceived: true });
   }
 
   emitUsage(config, { lane: 'own', rung: 'fetch', kind: 'fetch', url, ok: true, latencyMs: Date.now() - started, costUsd: 0 });

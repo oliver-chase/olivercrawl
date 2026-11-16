@@ -4,7 +4,7 @@
 // resolver shape. core/types.ts re-exports every name here.
 
 import type { BrowserAction } from '../fetch/local-render.js';
-import type { CrawlOptions, CrawlResult, UsageEvent } from './types.js';
+import type { CrawlOptions, UsageEvent } from './types.js';
 
 /** Called before each paid rung. Return false to veto the call — this is how
  *  a consumer enforces its own daily budget without this package importing

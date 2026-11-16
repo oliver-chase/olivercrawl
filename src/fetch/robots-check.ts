@@ -84,8 +84,7 @@ export async function evaluateRobotsForUrl(
     return { policy: 'unknown', reason: 'host does not resolve to a public address', crawlDelayMs: null };
   }
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), ROBOTS_TIMEOUT_MS);
+  const signal = AbortSignal.timeout(ROBOTS_TIMEOUT_MS);
   let body: string;
   // Recorded so a consumer can notice a source has moved — a redirect to
   // another domain is usually a rename worth updating in their registry.
@@ -100,7 +99,7 @@ export async function evaluateRobotsForUrl(
       const walk = await followManualRedirects(robotsUrl, {
         doFetch,
         maxHops: MAX_ROBOTS_REDIRECTS,
-        init: () => ({ method: 'GET', headers: { 'User-Agent': userAgent, accept: 'text/plain' }, signal: controller.signal }),
+        init: () => ({ method: 'GET', headers: { 'User-Agent': userAgent, accept: 'text/plain' }, signal }),
         onRedirect: async (location, from) => {
           let next: URL;
           try {
@@ -161,8 +160,6 @@ export async function evaluateRobotsForUrl(
     body = await readBodyCapped(res, ROBOTS_MAX_BYTES);
   } catch {
     return { policy: 'unknown', reason: 'robots.txt fetch failed or timed out (the site may be blocking the crawler)', crawlDelayMs: null };
-  } finally {
-    clearTimeout(timeoutId);
   }
 
   opts?.onRules?.(body);

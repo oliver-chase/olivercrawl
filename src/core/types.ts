@@ -1,5 +1,4 @@
 import type { PromptInjectionSignal } from '../guard/prompt-injection-guard.js';
-import type { BrowserAction } from '../fetch/local-render.js';
 import type { ContentImage } from '../extract/content-images.js';
 import type { FailureClass } from './failure-class.js';
 import type { StructuredSummary } from '../extract/structured-summary.js';
@@ -239,14 +238,6 @@ export type PageLink = { url: string; text: string };
  * page, so the fetch rung reads it (CRAWL-FEED-1).
  */
 export type ContentKind = 'html' | 'calendar' | 'csv' | 'json' | 'feed' | 'text' | 'pdf';
-
-export type { BrowserAction } from '../fetch/local-render.js';
-
-export type { ContentImage } from '../extract/content-images.js';
-
-export type { FailureClass } from './failure-class.js';
-
-export type { StructuredSummary } from '../extract/structured-summary.js';
 
 /** The result of a crawl. Ordinary failure is returned as a value. */
 export type CrawlResult =

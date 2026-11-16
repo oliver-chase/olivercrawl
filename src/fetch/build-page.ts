@@ -248,7 +248,9 @@ function guardedTitle(title: string | null | undefined): string | null {
 
 export async function buildTextPage(input: {
   url: string;
+  /** The rung's raw text; it passes the guard here, before anything is built from it. */
   text: string;
+  maxTextChars: number;
   contentKind: CrawlPage['contentKind'];
   contentType: string;
   rung: string;
@@ -258,20 +260,6 @@ export async function buildTextPage(input: {
   lastModified?: string | null;
   /** Hash source when the delivered text is not what arrived on the wire. */
   bodySource?: string;
-  /**
-   * GUARD-TELEMETRY-1: what the guard did, from the caller that ran it.
-   *
-   * Each text rung calls sanitizeCrawledText immediately before this, so the
-   * guard may have redacted or capped the text at this step. Reporting 0/false
-   * here would show a page as complete and unmodified while the delivered text
-   * contained [TRUNCATED].
-   *
-   * Passed in and never recomputed, because only the caller holds the
-   * sanitiser result and re-running the guard here would be a second pass over
-   * the same text to learn something already known.
-   */
-  redactionCount?: number;
-  truncated?: boolean;
   /**
    * Set ONLY when the rung's text already IS markdown.
    *
@@ -283,22 +271,24 @@ export async function buildTextPage(input: {
    *
    * Defaults to empty, which is the honest answer for a rung with no HTML.
    */
-  markdown?: string;
-}): Promise<CrawlPage> {
-  const textSha256 = await sha256Hex(input.text);
+  textIsMarkdown?: boolean;
+}): Promise<CrawlPage | QuarantineEvidence> {
+  const sanitized = sanitizeCrawledText(input.text, input.maxTextChars);
+  if (sanitized.signals.length > 0) {
+    return { quarantined: true, signals: sanitized.signals, text: sanitized.text, title: input.title ?? null };
+  }
+  const textSha256 = await sha256Hex(sanitized.text);
   return {
     url: input.url,
-    text: input.text,
-    markdown: input.markdown ?? '',
+    text: sanitized.text,
+    markdown: input.textIsMarkdown ? sanitized.text : '',
     contentKind: input.contentKind,
-    likelyEmptyState: looksLikeEmptyState(input.text),
+    likelyEmptyState: looksLikeEmptyState(sanitized.text),
     candidateContentImages: [],
     extractorVersion: EXTRACTOR_VERSION,
-    // Defaults only for a caller that genuinely ran no guard; every rung that
-    // sanitises passes its own numbers. See the field docs above for why the
-    // previous hardcoded 0/false was a lie.
-    redactionCount: input.redactionCount ?? 0,
-    truncated: input.truncated ?? false,
+    // GUARD-TELEMETRY-1: the guard may have redacted or capped the text, and the page says so.
+    redactionCount: sanitized.redactionCount,
+    truncated: sanitized.truncated,
     structuredData: summarizeStructuredData([]),
     // A title the rung reports passes the guard like the HTML title, and a title that trips it is dropped.
     title: guardedTitle(input.title),
@@ -306,7 +296,7 @@ export async function buildTextPage(input: {
     bodySha256: input.bodySource === undefined ? textSha256 : await sha256Hex(input.bodySource),
     contentRegionSha256: '',
     textSha256,
-    contentSimhash: simhash(input.text),
+    contentSimhash: simhash(sanitized.text),
     httpEtag: input.etag ?? null,
     httpLastModified: input.lastModified ?? null,
     jsonLd: [],

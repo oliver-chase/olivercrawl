@@ -33,7 +33,6 @@ import { pooledFetchFor } from './connection-pool.js';
 import type { DnsLookupFn } from '../core/types.js';
 import { optionalImport } from '../core/optional-import.js';
 
-
 /**
  * Redirect hops followed inside the render rung before the chain is refused.
  * A library constant that callers cannot set: the ceiling exists so a redirect

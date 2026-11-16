@@ -131,14 +131,6 @@ const PROMPT_INJECTION_PATTERNS: PromptInjectionPattern[] = [
 const MATCHERS = new Map(PROMPT_INJECTION_PATTERNS.map((p) => [p.id, new RegExp(p.source, 'i')]));
 const REDACTORS = new Map(PROMPT_INJECTION_PATTERNS.map((p) => [p.id, new RegExp(p.source, 'gi')]));
 
-function truncate(input: string, limit: number) {
-  if (input.length <= limit) {
-    return input;
-  }
-
-  return `${input.slice(0, limit)}...`;
-}
-
 /** Invisible characters that split a phrase without changing how it reads. */
 const INVISIBLE = /[\u00ad\u180e\u200b-\u200f\u202a-\u202e\u2060-\u2069\ufe00-\ufe0f\ufeff]|\udb40[\udc00-\udc7f]/g;
 
@@ -185,7 +177,7 @@ function stripUrls(text: string): string {
   return text.replace(URL_LIKE, ' ');
 }
 
-function collectSignals(input: string): PromptInjectionSignal[] {
+export function detectPromptInjectionSignals(input: string): PromptInjectionSignal[] {
   const normalized = normalizeForDetection(input);
   const direct = input.toLowerCase();
   const normalizedLower = normalized.toLowerCase();
@@ -219,15 +211,11 @@ function collectSignals(input: string): PromptInjectionSignal[] {
       id: pattern.id,
       severity: pattern.severity,
       label: pattern.label,
-      match: truncate(bestMatch, 140),
+      match: bestMatch.length <= 140 ? bestMatch : `${bestMatch.slice(0, 140)}...`,
     });
   }
 
   return signals;
-}
-
-export function detectPromptInjectionSignals(input: string): PromptInjectionSignal[] {
-  return collectSignals(input);
 }
 
 /**
@@ -246,7 +234,7 @@ function trimLineEnds(text: string): string {
 
 export function sanitizeCrawledText(input: string, maxChars = DEFAULT_MAX_TEXT_CHARS): SanitizedCrawlText {
   const originalLength = input.length;
-  const signals = collectSignals(input);
+  const signals = detectPromptInjectionSignals(input);
   let sanitized = input
     .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, ' ')
     .replace(/\r/g, '\n');
@@ -263,16 +251,16 @@ export function sanitizeCrawledText(input: string, maxChars = DEFAULT_MAX_TEXT_C
   // present (GUARD-TELEMETRY-1). A page with no signals is returned unredacted.
   const raisedIds = new Set(signals.map((signal) => signal.id));
   let redactionCount = 0;
+  const redacted = () => {
+    redactionCount += 1;
+    return '[REDACTED_PROMPT_INJECTION]';
+  };
   const missed: string[] = [];
   for (const pattern of PROMPT_INJECTION_PATTERNS) {
     if (!raisedIds.has(pattern.id)) continue;
     const countBefore = redactionCount;
     const redactionRegex = REDACTORS.get(pattern.id)!;
-    const redact = (segment: string) =>
-      segment.replace(redactionRegex, () => {
-        redactionCount += 1;
-        return '[REDACTED_PROMPT_INJECTION]';
-      });
+    const redact = (segment: string) => segment.replace(redactionRegex, redacted);
     // The encoded-payload rule is evaluated URL-free when it detects, so it redacts URL-free too: a long opaque
     // path in a working asset URL stays intact while a blob in the prose is masked.
     if (pattern.id === 'encoded-payload') {
@@ -290,10 +278,7 @@ export function sanitizeCrawledText(input: string, maxChars = DEFAULT_MAX_TEXT_C
   if (missed.length > 0) {
     sanitized = normalizeForDetection(sanitized);
     for (const id of missed) {
-      sanitized = sanitized.replace(REDACTORS.get(id)!, () => {
-        redactionCount += 1;
-        return '[REDACTED_PROMPT_INJECTION]';
-      });
+      sanitized = sanitized.replace(REDACTORS.get(id)!, redacted);
     }
   }
 

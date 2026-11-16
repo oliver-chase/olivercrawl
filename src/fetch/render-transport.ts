@@ -4,7 +4,6 @@
 // fetched through the crawler's pinned connection pool so the browser never
 // resolves a host itself.
 
-import { pooledFetchFor } from './connection-pool.js';
 import { dropBody, readBytesPrefix } from './http-mechanics.js';
 import type { RenderPage } from './local-render.js';
 

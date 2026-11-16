@@ -19,8 +19,7 @@
 
 import { availableVendorRungs } from '../../core/config.js';
 import { emitUsage } from '../../core/usage.js';
-import { sanitizeCrawledText } from '../../guard/prompt-injection-guard.js';
-import { buildTextPage } from '../../fetch/build-page.js';
+import { buildTextPage, isQuarantined } from '../../fetch/build-page.js';
 import type { ResolvedConfig } from '../../core/config.js';
 import type { CrawlOptions, CrawlResult } from '../../core/types.js';
 
@@ -31,29 +30,30 @@ type VendorRung = {
   scrape: (url: string, config: ResolvedConfig, timeoutMs: number) => Promise<{ text: string; title: string | null } | null>;
 };
 
+/** POSTs a JSON body to a vendor with its bearer token and returns the parsed JSON answer. */
+async function postVendorJson(vendor: string, endpoint: string, token: string | undefined, body: unknown, timeoutMs: number): Promise<unknown> {
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+  if (!response.ok) {
+    // Surface the vendor's own message — "Key limit exceeded" and "invalid
+    // key" are operationally different and a bare status code hides that.
+    const text = await response.text().catch(() => '');
+    throw new Error(`${vendor} HTTP ${response.status}: ${text.slice(0, 200)}`);
+  }
+  return response.json();
+}
+
 const FIRECRAWL_ENDPOINT = 'https://api.firecrawl.dev/v1/scrape';
 
 const firecrawlRung: VendorRung = {
   name: 'firecrawl',
   async scrape(url, config, timeoutMs) {
-    const response = await fetch(FIRECRAWL_ENDPOINT, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        authorization: `Bearer ${config.vendor?.firecrawl}`,
-      },
-      body: JSON.stringify({ url, formats: ['markdown'], onlyMainContent: true }),
-      signal: AbortSignal.timeout(timeoutMs),
-    });
-
-    if (!response.ok) {
-      // Surface the vendor's own message — "Key limit exceeded" and "invalid
-      // key" are operationally different and a bare status code hides that.
-      const body = await response.text().catch(() => '');
-      throw new Error(`Firecrawl HTTP ${response.status}: ${body.slice(0, 200)}`);
-    }
-
-    const data = (await response.json()) as { data?: { markdown?: string; text?: string; metadata?: { title?: string } } };
+    const request = { url, formats: ['markdown'], onlyMainContent: true };
+    const data = (await postVendorJson('Firecrawl', FIRECRAWL_ENDPOINT, config.vendor?.firecrawl, request, timeoutMs)) as { data?: { markdown?: string; text?: string; metadata?: { title?: string } } };
     const text = data.data?.markdown || data.data?.text || '';
     if (!text.trim()) return null;
     return { text, title: data.data?.metadata?.title ?? null };
@@ -67,20 +67,9 @@ const APIFY_BASE = 'https://api.apify.com/v2';
 const apifyRung: VendorRung = {
   name: 'apify',
   async scrape(url, config, timeoutMs) {
-    const token = config.vendor?.apify;
-    const response = await fetch(`${APIFY_BASE}/acts/apify~website-content-crawler/run-sync-get-dataset-items`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
-      body: JSON.stringify({ startUrls: [{ url }], maxCrawlPages: 1, crawlerType: 'playwright:firefox' }),
-      signal: AbortSignal.timeout(timeoutMs),
-    });
-
-    if (!response.ok) {
-      const body = await response.text().catch(() => '');
-      throw new Error(`Apify HTTP ${response.status}: ${body.slice(0, 200)}`);
-    }
-
-    const items = (await response.json()) as Array<{ text?: string; markdown?: string; metadata?: { title?: string } }>;
+    const endpoint = `${APIFY_BASE}/acts/apify~website-content-crawler/run-sync-get-dataset-items`;
+    const request = { startUrls: [{ url }], maxCrawlPages: 1, crawlerType: 'playwright:firefox' };
+    const items = (await postVendorJson('Apify', endpoint, config.vendor?.apify, request, timeoutMs)) as Array<{ text?: string; markdown?: string; metadata?: { title?: string } }>;
     const first = Array.isArray(items) ? items[0] : undefined;
     const text = first?.markdown || first?.text || '';
     if (!text.trim()) return null;
@@ -152,8 +141,21 @@ export async function crawlWithVendorLane(
       }
 
       // Vendor output is page content too — it gets the same guard.
-      const sanitized = sanitizeCrawledText(result.text, maxTextChars);
-      if (sanitized.signals.length > 0) {
+      const page = await buildTextPage({
+        url,
+        text: result.text,
+        maxTextChars,
+        contentKind: 'html',
+        contentType: 'text/markdown',
+        rung: rungName,
+        lane: 'vendor',
+        title: result.title,
+        bodySource: result.text,
+        // Both vendor rungs are ASKED for markdown, so the delivered text
+        // already is markdown — same value, no second conversion.
+        textIsMarkdown: true,
+      });
+      if (isQuarantined(page)) {
         emitUsage(config, { lane: 'vendor', rung: rungName, kind: 'scrape', url, ok: false, latencyMs: Date.now() - started, error: 'quarantined' });
         // QUARANTINE-EVIDENCE-1: same evidence the own lane returns. A paid
         // page that trips the guard is still a page a consumer must be able to
@@ -163,31 +165,12 @@ export async function crawlWithVendorLane(
           reason: 'quarantined',
           detail: `Prompt-injection signals in ${rungName} content.`,
           lane: 'vendor',
-          quarantine: { signals: sanitized.signals, text: sanitized.text, title: result.title ?? null },
+          quarantine: { signals: page.signals, text: page.text, title: page.title },
         };
       }
 
       emitUsage(config, { lane: 'vendor', rung: rungName, kind: 'scrape', url, ok: true, latencyMs: Date.now() - started });
-      return {
-        ok: true,
-        pages: [
-          await buildTextPage({
-            url,
-            text: sanitized.text,
-            contentKind: 'html',
-            contentType: 'text/markdown',
-            rung: rungName,
-            lane: 'vendor',
-            title: result.title,
-            bodySource: result.text,
-            // Both vendor rungs are ASKED for markdown, so the delivered text
-            // already is markdown — same value, no second conversion.
-            markdown: sanitized.text,
-            redactionCount: sanitized.redactionCount,
-            truncated: sanitized.truncated,
-          }),
-        ],
-      };
+      return { ok: true, pages: [page] };
     } catch (error) {
       lastDetail = error instanceof Error ? error.message : String(error);
       emitUsage(config, { lane: 'vendor', rung: rungName, kind: 'scrape', url, ok: false, latencyMs: Date.now() - started, error: lastDetail });

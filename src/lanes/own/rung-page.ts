@@ -21,13 +21,11 @@ export function buildRungPage(
     lastModified: string | null;
     baseHost: string;
     rung: string;
-    /** Set when the caller already resolved the cap. */
-    maxTextChars?: number;
   },
 ) {
   return buildPage({
     ...input,
-    maxTextChars: input.maxTextChars ?? options.maxTextChars ?? config.defaults.maxTextChars,
+    maxTextChars: options.maxTextChars ?? config.defaults.maxTextChars,
     includeHtml: options.includeHtml ?? false,
     maxLinks: config.limits.maxLinksPerPage,
     maxOutboundHosts: config.limits.maxOutboundHosts,

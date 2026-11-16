@@ -49,8 +49,7 @@ export async function fetchViaWayback(
     return { ok: false, detail: 'A URL with credentials is never sent to the archive.' };
   }
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), WAYBACK_TIMEOUT_MS);
+  const signal = AbortSignal.timeout(WAYBACK_TIMEOUT_MS);
 
   try {
     const query = new URL(CDX_ENDPOINT);
@@ -63,7 +62,7 @@ export async function fetchViaWayback(
     query.searchParams.set('sort', 'reverse');
     query.searchParams.set('fl', 'timestamp,original');
 
-    const indexRes = await doFetch(query.toString(), { signal: controller.signal });
+    const indexRes = await doFetch(query.toString(), { signal });
     if (!indexRes.ok) {
       dropBody(indexRes);
       return { ok: false, detail: `Archive index returned ${indexRes.status}.` };
@@ -87,7 +86,7 @@ export async function fetchViaWayback(
     }
 
     const snapshotUrl = `${SNAPSHOT_PREFIX}${timestamp}id_/${targetUrl}`;
-    const snapshotRes = await doFetch(snapshotUrl, { signal: controller.signal });
+    const snapshotRes = await doFetch(snapshotUrl, { signal });
     if (!snapshotRes.ok) return { ok: false, detail: `Archived capture returned ${snapshotRes.status}.` };
 
     const html = await readBodyCapped(snapshotRes, WAYBACK_MAX_BYTES);
@@ -96,8 +95,6 @@ export async function fetchViaWayback(
     return { ok: true, html, capturedAt: capturedAt ?? timestamp, snapshotUrl };
   } catch (error) {
     return { ok: false, detail: `Archive lookup failed: ${error instanceof Error ? error.message : String(error)}` };
-  } finally {
-    clearTimeout(timeout);
   }
 }
 

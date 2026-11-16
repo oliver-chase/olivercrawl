@@ -5,6 +5,7 @@
 import { assertRequestUrlAllowed, assertTargetEligible } from '../../fetch/host-policy.js';
 import { evaluateRobotsForUrl, parseRobots, userAgentToken, type RobotsPolicy } from '../../fetch/robots-check.js';
 import type { ResolvedConfig } from '../../core/config.js';
+import { rememberBounded } from '../../core/bounded-map.js';
 import type { CrawlTarget } from '../../core/types.js';
 
 // CRAWL-ROBOTS-1: robots.txt was ported but nothing ever CALLED it, so a
@@ -76,11 +77,7 @@ async function resolveRobotsPolicy(url: string, config: ResolvedConfig): Promise
         fresh.expiresAt = Date.now() + ROBOTS_FAILURE_TTL_MS;
         return 'unknown' as const;
       });
-    if (ROBOTS_CACHE.size >= MAX_ROBOTS_HOSTS) {
-      const oldest = ROBOTS_CACHE.keys().next().value;
-      if (oldest !== undefined) ROBOTS_CACHE.delete(oldest);
-    }
-    ROBOTS_CACHE.set(host, fresh);
+    rememberBounded(ROBOTS_CACHE, host, fresh, MAX_ROBOTS_HOSTS);
     entry = fresh;
   }
   const policy = await entry.pending;
@@ -115,9 +112,8 @@ export async function approveCrawlPolicy(
   target: CrawlTarget,
   url: string,
   config: ResolvedConfig,
-): Promise<{ requestUrl: URL; effectiveTarget: CrawlTarget }> {
+): Promise<URL> {
   const effectiveTarget = await resolveTargetPolicy(target, config, url);
   assertTargetEligible(effectiveTarget);
-  const requestUrl = assertRequestUrlAllowed(effectiveTarget, url);
-  return { requestUrl, effectiveTarget };
+  return assertRequestUrlAllowed(effectiveTarget, url);
 }
