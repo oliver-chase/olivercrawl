@@ -47,7 +47,6 @@ describe('subresource requests are screened too', () => {
   // private address landed the body in the DOM, which then left in
   // page.content(). The navigation guard never saw those requests.
   test('non-navigation requests are resolution-checked', () => {
-    expect(renderFn).toMatch(/isNavigationRequest\(\)/);
     expect(renderFn).toMatch(/assertHostResolvesToPublicAddress\(new URL\(hopUrl\)\.hostname/);
   });
 

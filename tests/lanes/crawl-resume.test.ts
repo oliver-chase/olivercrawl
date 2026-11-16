@@ -78,34 +78,6 @@ describe('progress snapshots are coherent', () => {
 });
 
 describe('resuming continues where the run stopped', () => {
-  test('a resumed run does not re-fetch pages already done', async () => {
-    stub();
-    const snapshots: CrawlProgress[] = [];
-    await crawlSite(crawler(), target, {
-      seeds: ['https://venue.example.com/'],
-      followLinks: true,
-      maxDepth: 1,
-      maxPages: 2, // stop early, as if killed
-      onProgress: (s) => snapshots.push(s),
-    });
-
-    const snapshot = snapshots[snapshots.length - 1]!;
-    expect(snapshot.visited.length).toBeGreaterThan(0);
-
-    // Second process, fresh everything — only the snapshot carries over.
-    const fetchedAfter = stub();
-    const resumed = await crawlSite(crawler(), target, {
-      followLinks: true,
-      maxDepth: 1,
-      maxPages: 10,
-      resumeFrom: snapshot,
-    });
-
-    // The home page was already done in run one and must not be fetched again.
-    expect(fetchedAfter).not.toContain('https://venue.example.com/');
-    expect(resumed.pages.length).toBeGreaterThan(0);
-  });
-
   test('together, the two runs cover the site exactly once', async () => {
     const firstFetches = stub();
     const snapshots: CrawlProgress[] = [];

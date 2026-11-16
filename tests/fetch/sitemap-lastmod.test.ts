@@ -39,13 +39,15 @@ const crawler = () => createCrawler({ userAgent: 'T/1', dnsLookup: publicDns });
 
 describe('lastmod is captured and handed back', () => {
   test('a first run reports every published lastmod', async () => {
-    stub();
+    const fetched = stub();
     const run = await crawlSite(crawler(), target, { useSitemap: true, maxPages: 10 });
 
     expect(run.lastmod['https://venue.example.com/a']).toBe('2026-07-01');
     expect(run.lastmod['https://venue.example.com/b']).toBe('2026-07-02');
     // No <lastmod> published, so the field is absent.
     expect(run.lastmod['https://venue.example.com/c']).toBeUndefined();
+    // With no priorLastmod, every page is fetched.
+    expect(fetched).toHaveLength(3);
     expect(run.skippedByLastmod).toEqual([]);
   });
 });
@@ -96,12 +98,5 @@ describe('unchanged pages are never fetched at all', () => {
       priorLastmod: { 'https://venue.example.com/c': '2026-07-01' },
     });
     expect(fetched).toContain('https://venue.example.com/c');
-  });
-
-  test('omitting priorLastmod crawls everything, as before', async () => {
-    const fetched = stub();
-    const run = await crawlSite(crawler(), target, { useSitemap: true, maxPages: 10 });
-    expect(fetched).toHaveLength(3);
-    expect(run.skippedByLastmod).toEqual([]);
   });
 });

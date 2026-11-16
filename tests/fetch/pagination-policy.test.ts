@@ -1,6 +1,5 @@
 import { describe, expect, test, vi } from 'vitest';
 import { discoverPaginatedUrls, findNextPageUrl } from '@/extract/pagination-discovery';
-import { __clearDnsCacheForTests } from '@/fetch/host-policy';
 import { publicDns } from '../helpers';
 
 // Pagination follows the crawler's own controls: same site only, the caller's resolver and user agent.
@@ -9,7 +8,6 @@ const html = (body: string) => new Response(body, { status: 200, headers: { 'con
 
 describe('discoverPaginatedUrls', () => {
   test('a rel=next link to another site is not followed', async () => {
-    __clearDnsCacheForTests();
     const requested: string[] = [];
     const fetchImpl = (async (url: string) => {
       requested.push(url);
@@ -21,7 +19,6 @@ describe('discoverPaginatedUrls', () => {
   });
 
   test('the caller user agent and resolver are used', async () => {
-    __clearDnsCacheForTests();
     const dns = vi.fn(publicDns);
     let sent = '';
     const fetchImpl = (async (_url: string, init?: RequestInit) => {

@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import { createCrawler } from '@/index';
 import { crawlSite } from '@/crawl-site';
-import { readPageCache, writePageCache, __clearPageCacheForTests } from '@/core/page-cache';
+import { readPageCache, writePageCache } from '@/core/page-cache';
 import type { CrawlResult, CrawlTarget } from '@/core/types';
 import { publicDns } from '../helpers';
 
@@ -78,7 +78,6 @@ describe('the page cache', () => {
     ({ ok: true, notModified: false, lane: 'own', pages: [{ url: 'u', text: 'x'.repeat(chars), markdown: '' }] }) as unknown as CrawlResult;
 
   test('stops holding results once the size budget is spent', () => {
-    __clearPageCacheForTests();
     for (let i = 0; i < 12; i++) writePageCache(`https://c.example.com/${i}`, undefined, 60_000, big(10_000_000), 'v');
     const held = Array.from({ length: 12 }, (_, i) => readPageCache(`https://c.example.com/${i}`, undefined, 60_000, 'v')).filter(Boolean);
     expect(held.length).toBeLessThanOrEqual(5);

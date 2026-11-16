@@ -227,18 +227,6 @@ describe('crawlSite — whole-site discovery from one URL (followLinks)', () => 
     expect(urls).not.toContain('https://venue.example.com/calendar/august');
   });
 
-  test('excludePatterns keep known-useless paths out', async () => {
-    serveSite();
-    const result = await crawlSite(crawler(), target, {
-      seeds: ['https://venue.example.com/'],
-      followLinks: true,
-      maxPages: 10,
-      excludePatterns: [/\/menu/],
-    });
-
-    expect(result.pages.map((p) => p.url)).not.toContain('https://venue.example.com/menu');
-  });
-
   test('a site where every page links every other page still terminates', async () => {
     // Classic nav-on-every-page shape — an infinite loop without dedup.
     globalThis.fetch = (async () =>

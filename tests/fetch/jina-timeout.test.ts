@@ -30,22 +30,18 @@ describe('the Jina rung honours the caller timeout', () => {
 
   test('a caller that sets nothing is cut off at the rung default of 30 seconds', async () => {
     vi.useFakeTimers();
-    try {
-      const never = ((_url: string, init?: RequestInit) =>
-        new Promise((_resolve, reject) => init?.signal?.addEventListener('abort', () => reject(new Error('aborted'))))) as unknown as typeof fetch;
-      let finished = false;
-      const pending = fetchViaJina('https://site.example.com/x', { fetchImpl: never }).then((value) => {
-        finished = true;
-        return value;
-      });
-      await vi.advanceTimersByTimeAsync(29_000);
-      expect(finished).toBe(false);
-      await vi.advanceTimersByTimeAsync(2_000);
-      expect(finished).toBe(true);
-      expect(await pending).toBeNull();
-    } finally {
-      vi.useRealTimers();
-    }
+    const never = ((_url: string, init?: RequestInit) =>
+      new Promise((_resolve, reject) => init?.signal?.addEventListener('abort', () => reject(new Error('aborted'))))) as unknown as typeof fetch;
+    let finished = false;
+    const pending = fetchViaJina('https://site.example.com/x', { fetchImpl: never }).then((value) => {
+      finished = true;
+      return value;
+    });
+    await vi.advanceTimersByTimeAsync(29_000);
+    expect(finished).toBe(false);
+    await vi.advanceTimersByTimeAsync(2_000);
+    expect(finished).toBe(true);
+    expect(await pending).toBeNull();
   });
 
 });

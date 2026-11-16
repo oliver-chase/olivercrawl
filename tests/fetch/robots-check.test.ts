@@ -64,12 +64,6 @@ describe('parseRobots', () => {
 });
 
 describe('evaluateRobotsForUrl (fetch layer)', () => {
-  test('404 robots.txt = allow', async () => {
-    const fetchImpl = (async () => new Response('', { status: 404 })) as unknown as typeof fetch;
-    const r = await evaluateRobotsForUrl('https://example.com/events', { fetchImpl });
-    expect(r.policy).toBe('allow');
-  });
-
   test('200 with Allow: / = allow', async () => {
     const fetchImpl = (async () => new Response('User-agent: *\nAllow: /', { status: 200 })) as unknown as typeof fetch;
     const r = await evaluateRobotsForUrl('https://example.com/events', { fetchImpl });

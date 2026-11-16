@@ -44,6 +44,8 @@ describe('an injection payload in <title> does not reach the caller', () => {
     if (r.ok) throw new Error('expected a quarantine');
     expect(r.reason).toBe('quarantined');
     expect(r.quarantine?.title).toBeNull();
+    // The title path builds its refusal separately, so it must still report what tripped it.
+    expect(r.quarantine!.signals.length).toBeGreaterThan(0);
   });
 
   test('a page with no title still returns', async () => {

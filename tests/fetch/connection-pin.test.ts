@@ -1,6 +1,6 @@
-import { afterEach, describe, expect, test, vi } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 import { pinnedLookup } from '@/fetch/connection-pool';
-import { assertHostResolvesToPublicAddress, __clearDnsCacheForTests } from '@/fetch/host-policy';
+import { assertHostResolvesToPublicAddress } from '@/fetch/host-policy';
 import { evaluateRobotsForUrl } from '@/fetch/robots-check';
 import { probeCheapChangeSignal } from '@/fetch/cheap-change-probe';
 import { discoverSitemapUrls } from '@/fetch/sitemap-discovery';
@@ -19,11 +19,6 @@ const lookup = (resolve = privateDns, host = 'pin.example.com', approvedBy = pub
       done({ error, address }),
     );
   });
-
-afterEach(() => {
-  vi.useRealTimers();
-  __clearDnsCacheForTests();
-});
 
 describe('connections go to approved addresses', () => {
   test('an approved host connects to its approved address and ignores a later private answer', async () => {

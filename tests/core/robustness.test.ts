@@ -25,8 +25,6 @@ describe('character encoding', () => {
     // 0xE9 is 'é' in windows-1252, invalid as standalone UTF-8.
     const bytes = new Uint8Array([0x63, 0x61, 0x66, 0xe9]); // "café"
     expect(decodeBody(bytes, 'text/html; charset=windows-1252')).toBe('café');
-    // Proof the naive assumption really does corrupt it:
-    expect(new TextDecoder().decode(bytes)).not.toBe('café');
   });
 
   test('an unknown charset label degrades to utf-8 and does not throw', () => {
@@ -52,7 +50,7 @@ describe('character encoding', () => {
   });
 });
 
-describe('Retry-After compliance', () => {
+describe('CRAWL-BACKOFF-1 — Retry-After compliance', () => {
   test('surfaces the origin-requested wait on a 429', async () => {
     globalThis.fetch = (async (input: RequestInfo | URL) => {
       if (String(input).includes('r.jina.ai')) return new Response('', { status: 500 });

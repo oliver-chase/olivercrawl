@@ -47,19 +47,6 @@ describe('a quarantine refusal carries what tripped it', () => {
     expect(result.quarantine!.text).not.toContain(PAYLOAD);
   });
 
-  test('a payload in the TITLE is reported too', async () => {
-    // GUARD-TITLE-1 quarantines on the title alone, and that path built its
-    // refusal separately — so it was the one most likely to return nothing.
-    serveHtml(`<html><head><title>${PAYLOAD}</title></head><body><main><p>Real event copy here, plenty of it.</p></main></body></html>`);
-    const result = await createCrawler({ userAgent: 'T/1 (+https://t.example.com)', dnsLookup: publicDns }).crawl(
-      target,
-      'https://site.example.com/x',
-    );
-    if (result.ok) throw new Error('expected a refusal');
-    expect(result.quarantine).toBeDefined();
-    expect(result.quarantine!.signals.length).toBeGreaterThan(0);
-  });
-
   test('an ordinary failure carries no quarantine evidence', async () => {
     // The field is the SIGNAL that this is a quarantine. Populating it on other
     // failures would make a consumer raise review tasks for timeouts. This was
@@ -90,15 +77,20 @@ describe('a quarantine refusal carries what tripped it', () => {
       return new Response('blocked', { status: 403 });
     }) as typeof fetch;
 
-    const result = await createCrawler({ userAgent: 'T/1 (+https://t.example.com)', dnsLookup: publicDns }).crawl(
-      target,
-      'https://site.example.com/x',
-    );
+    const usage: Array<{ rung: string; ok: boolean }> = [];
+    const result = await createCrawler({
+      userAgent: 'T/1 (+https://t.example.com)',
+      dnsLookup: publicDns,
+      onUsage: (e) => usage.push({ rung: e.rung, ok: e.ok }),
+    }).crawl(target, 'https://site.example.com/x');
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.reason).toBe('quarantined');
     expect(result.quarantine, 'the Jina rung returned a bare refusal').toBeDefined();
     expect(result.quarantine!.signals.length).toBeGreaterThan(0);
+    // QUARANTINE-TELEMETRY-1: a rung that quarantines silently lets a site serve
+    // injection payloads indefinitely without ever showing up in telemetry.
+    expect(usage.some((e) => e.rung === 'guard' && !e.ok)).toBe(true);
   });
 });
 
@@ -187,12 +179,15 @@ describe('every rung that can quarantine reports its evidence', () => {
       return new Response('blocked', { status: 403 });
     }) as typeof fetch;
 
+    const usage: Array<{ rung: string; ok: boolean }> = [];
     const result = await createCrawler({
       userAgent: 'T/1 (+https://t.example.com)',
       dnsLookup: publicDns,
       browserRender: { url: 'https://render.example.com' },
+      onUsage: (e) => usage.push({ rung: e.rung, ok: e.ok }),
     }).crawl(target, 'https://site.example.com/x');
     expectEvidence(result, 'browser-render');
+    expect(usage.some((e) => e.rung === 'guard' && !e.ok)).toBe(true);
   });
 
   test('the archive rung reports evidence', async () => {

@@ -1,9 +1,8 @@
-import { afterEach, describe, expect, test, vi } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 import { createCrawler } from '@/index';
 import { crawlSite, crawlSites } from '@/crawl-site';
 import type { CrawlStore, CrawlState } from '@/crawl-store';
 import type { CrawlTarget, UsageEvent } from '@/core/types';
-import { __clearDnsCacheForTests } from '@/fetch/host-policy';
 import { publicDns } from '../helpers';
 
 // Behavior the first QA pass found unproven: eight in flight, Crawl-delay under concurrency, per-host reports
@@ -16,11 +15,6 @@ const doc = (links: string[] = []) =>
     .map((l) => `<a href="${l}">x</a>`)
     .join('')}</main></body></html>`;
 const html = { 'content-type': 'text/html; charset=utf-8' };
-
-afterEach(() => {
-  vi.useRealTimers();
-  __clearDnsCacheForTests();
-});
 
 describe('eight requests in flight', () => {
   test('one origin that allows eight runs eight together', async () => {

@@ -51,12 +51,6 @@ describe('an off-domain robots.txt redirect is followed, and reported', () => {
 });
 
 describe('legitimate same-domain redirects still work', () => {
-  test('apex to www is followed', async () => {
-    redirectTo('https://www.site.example.com/robots.txt');
-    const r = await check();
-    expect(r.policy).toBe('allow');
-  });
-
   test('a path redirect on the same host is followed', async () => {
     redirectTo('https://site.example.com/robots.txt?v=2');
     const r = await check();

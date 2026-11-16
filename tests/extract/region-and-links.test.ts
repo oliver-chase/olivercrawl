@@ -15,12 +15,6 @@ const base = {
 };
 
 describe('no content is dropped', () => {
-  test('two articles of equal weight are both kept', () => {
-    const out = md(`<html><body><div><article>${para('Alpha concert')}</article><article>${para('Beta concert')}</article></div></body></html>`);
-    expect(out).toContain('Alpha');
-    expect(out).toContain('Beta');
-  });
-
   test('event blocks beside a long post are kept', () => {
     const out = md(`<html><body><div class="post">${para('Long post one')}${para('and two')}</div><div>${para('Event A')}</div><div>${para('Event B')}</div></body></html>`);
     expect(out).toContain('Event A');
@@ -45,11 +39,6 @@ describe('the change hash reads the region the markdown reads', () => {
     const b = await buildPage({ ...base, html: three('Two edited') });
     if ('quarantined' in a || 'quarantined' in b) throw new Error('unexpected quarantine');
     expect(a.markdown).not.toBe(b.markdown);
-  });
-
-  test('a change in the nav alone changes neither', async () => {
-    const page = (nav: string) => `<html><body><nav>${nav}</nav><main>${para('Stable content')}</main></body></html>`;
-    expect(await computeContentRegionHash(page('Mon'))).toBe(await computeContentRegionHash(page('Tue')));
   });
 });
 

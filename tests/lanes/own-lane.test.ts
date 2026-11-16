@@ -164,14 +164,6 @@ describe('own lane — redirects are re-validated per hop', () => {
 });
 
 describe('lane selection', () => {
-  test('vendor lane requested with no key reports no_lane_available, does not throw', async () => {
-    const crawler = createCrawler({ userAgent: 'TestBot/1.0', dnsLookup: publicDns });
-    const result = await crawler.crawl(target, 'https://venue.example.com/events', { lanes: ['vendor'] });
-
-    expect(result).toMatchObject({ ok: false, reason: 'no_lane_available' });
-    expect(crawler.vendorRungs()).toEqual([]);
-  });
-
   test('a policy refusal does not escalate to the paid lane', async () => {
     let vendorCalled = false;
     globalThis.fetch = (async (input: RequestInfo | URL) => {

@@ -1,11 +1,9 @@
-import { afterEach, describe, expect, test } from 'vitest';
-import { __clearPageCacheForTests, readPageCache, writePageCache } from '@/core/page-cache';
+import { describe, expect, test } from 'vitest';
+import { readPageCache, writePageCache } from '@/core/page-cache';
 import type { CrawlResult } from '@/core/types';
 
 // Only a full success is replayed. A failure may be transient and a 304 depends on the validators the
 // first caller sent, so neither is cached.
-
-afterEach(() => __clearPageCacheForTests());
 
 const failure = { ok: false, reason: 'unreachable', detail: 'down', lane: 'own' } as unknown as CrawlResult;
 const notModified = { ok: true, notModified: true, lane: 'own' } as unknown as CrawlResult;

@@ -70,23 +70,3 @@ describe('JINA-SELFHOST-1 — the reader endpoint is configurable', () => {
     expect(called).not.toContain('r.jina.ai');
   });
 });
-
-describe('CRAWL-BACKOFF-1 — the origin\'s schedule beats ours', () => {
-  test('Retry-After is surfaced so a retry honours it', async () => {
-    // Our own backoff is a guess; the origin's is an instruction, and
-    // ignoring it is what gets a crawler banned.
-    globalThis.fetch = (async (u: RequestInfo | URL) =>
-      String(u).includes('r.jina.ai')
-        ? new Response('', { status: 500 })
-        : new Response('slow down', { status: 429, headers: { 'retry-after': '120' } })) as typeof fetch;
-
-    const r = await createCrawler({ userAgent: 'T/1 (+https://t.example.com)', dnsLookup: publicDns }).crawl(
-      target,
-      'https://site.example.com/x',
-    );
-
-    expect(r.ok).toBe(false);
-    if (r.ok) throw new Error('expected failure');
-    expect(r.retryAfterMs).toBe(120_000);
-  });
-});

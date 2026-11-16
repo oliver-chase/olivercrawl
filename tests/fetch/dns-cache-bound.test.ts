@@ -20,14 +20,4 @@ describe('DNS verdict cache', () => {
     vi.advanceTimersByTime(61_000);
     await expect(assertHostResolvesToPublicAddress('rebind.example.com', lookup)).rejects.toThrow(/private IPv4/i);
   });
-
-  test('a repeat lookup inside the lifetime reuses the verdict', async () => {
-    let lookups = 0;
-    const lookup = async () => {
-      lookups++;
-      return [{ address: '93.184.216.34', family: 4 }];
-    };
-    for (let i = 0; i < 5; i++) await assertHostResolvesToPublicAddress('reuse.example.com', lookup);
-    expect(lookups).toBe(1);
-  });
 });

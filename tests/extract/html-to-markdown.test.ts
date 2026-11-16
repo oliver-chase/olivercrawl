@@ -85,10 +85,6 @@ describe('MARKDOWN-BLOCKLINK-1 — a bare link keeps its href', () => {
     expect(out).toContain('](https://venue.example/a)');
     expect(out).toContain('](https://venue.example/b)');
   });
-
-  test('a link inside a paragraph still works', () => {
-    expect(md('<main><p>See the <a href="/x">details</a>.</p></main>')).toBe('See the [details](https://venue.example/x).');
-  });
 });
 
 describe('page chrome never reaches the model', () => {

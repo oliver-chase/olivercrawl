@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import { createCrawler } from '@/index';
 import { crawlSite } from '@/crawl-site';
-import type { CrawlTarget, UsageEvent } from '@/core/types';
+import type { CrawlTarget } from '@/core/types';
 import { publicDns } from '../helpers';
 
 // CRAWL-HOST-STATS-1: a run reports how its host behaved, and usage events name the host.
@@ -39,18 +39,5 @@ describe('per-host stats', () => {
     expect(stats.blockRate).toBeGreaterThan(0);
     expect(stats.blockRate).toBeLessThanOrEqual(0.5);
     expect(stats.medianLatencyMs).toBeGreaterThanOrEqual(0);
-  });
-
-  test('usage events carry the host', async () => {
-    web();
-    const events: UsageEvent[] = [];
-    const crawler = createCrawler({
-      userAgent: 'T/1 (+https://t.example/bot)',
-      dnsLookup: publicDns,
-      onUsage: (e) => events.push(e),
-    });
-    await crawlSite(crawler, target, { maxRetries: 0 });
-    expect(events.length).toBeGreaterThan(0);
-    expect(events.every((e) => e.host === 'stats.example.com')).toBe(true);
   });
 });

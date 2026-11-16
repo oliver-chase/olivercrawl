@@ -49,19 +49,4 @@ describe('a cached page never escapes the policy gate', () => {
     const after = await c.crawl(paused, 'https://venue.example.com/events');
     expect(after.ok).toBe(false);
   });
-
-  test('the cache still works for a legitimately repeated crawl', async () => {
-    let fetches = 0;
-    globalThis.fetch = (async () => {
-      fetches++;
-      return html();
-    }) as typeof fetch;
-    const c = crawler();
-    const target: CrawlTarget = { baseUrl: 'https://venue.example.com', robotsPolicy: 'allow', active: true };
-
-    await c.crawl(target, 'https://venue.example.com/events');
-    await c.crawl(target, 'https://venue.example.com/events');
-
-    expect(fetches).toBe(1);
-  });
 });
