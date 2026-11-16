@@ -34,9 +34,10 @@ count_lines() {
 kind() {
   case "$1" in
     */tests/*|tests/*|*test_*.py|*_test.py|*.test.*|*.spec.*) echo tests ;;
-    */SKILL.md|SKILL.md|*/skills/*|skills/*|*/agents/*|agents/*) echo skills ;;
+    skills/*/scripts/*|*/skills/*/scripts/*) echo code ;;
+    */SKILL.md|SKILL.md|*/skills/*|skills/*|references/*|*/references/*|*/agents/*|agents/*) echo skills ;;
     *.md|*.txt|*.rst|docs/*|*/docs/*) echo docs ;;
-    *.py|*.sh|*.js|*.ts|*.swift|*.applescript|*.scpt|*.zsh|*.rb|*.go|scripts/*|*/scripts/*) echo code ;;
+    *.py|*.sh|*.js|*.mjs|*.ts|*.tsx|*.jsx|*.html|*.css|*.swift|*.applescript|*.scpt|*.zsh|*.rb|*.go|scripts/*|*/scripts/*) echo code ;;
     *.json|*.yml|*.yaml|*.toml|*.csv|*.plist|*.example|.githooks/*|*.cfg|*.ini) echo config ;;
     *) echo other ;;
   esac
@@ -56,7 +57,9 @@ for entry in entries:
     meta, _, path = entry.partition(b"\t")
     mode, sha, _stage = meta.split()
     path = os.fsdecode(path)
-    if os.path.isfile(path):
+    # A symlink holds no lines of its own, and following it counted its target twice in the working tree.
+    # Under --staged the index copy counts, even when the working file was deleted after staging.
+    if (staged and mode != b"120000") or (os.path.isfile(path) and not os.path.islink(path)):
         files.append((mode, sha.decode(), path))
 total = 0
 if staged:
@@ -81,7 +84,7 @@ fi
 tmp="$(mktemp)"
 trap 'rm -f "$tmp"' EXIT
 while IFS= read -r f; do
-  [ -f "$f" ] || continue
+  [ -f "$f" ] && [ ! -L "$f" ] || continue
   lines=$(count_lines "$f")
   bytes=$(wc -c <"$f" | tr -d ' ')
   printf '%s\t%s\t%s\n' "$(kind "$f")" "$lines" "$bytes" >>"$tmp"
@@ -108,13 +111,14 @@ rc=0
 # The repo's own config wins over a test fixture that happens to sort first.
 cfg="$(git ls-files 2>/dev/null | grep -x 'docs/backlog-config.json' || git ls-files 2>/dev/null | grep -v fixture | grep -m1 'backlog-config.json' || true)"
 if [ -n "$cfg" ] && command -v gh >/dev/null 2>&1; then
-  repo="$(python3 -c "import json,sys; c=json.load(open('$cfg')); print(c['repoOwner']+'/'+c['repoName'])")"
+  # The path goes in as an argument, so a quote in it cannot break the Python source.
+  repo="$(python3 -c "import json,sys; c=json.load(open(sys.argv[1])); print(c['repoOwner']+'/'+c['repoName'])" "$cfg")"
   echo
   echo "== Remaining work ($repo)"
   gh issue list --repo "$repo" --state open --limit 500 --json number,labels \
     --jq '"open issues: \(length)"' 2>/dev/null || { echo "open issues: unavailable (gh failed)"; rc=1; }
-  proj="$(python3 -c "import json; c=json.load(open('$cfg')); print(c['projectNumber'])")"
-  owner="$(python3 -c "import json; c=json.load(open('$cfg')); print(c['projectOwner'])")"
+  proj="$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['projectNumber'])" "$cfg")"
+  owner="$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['projectOwner'])" "$cfg")"
   gh project item-list "$proj" --owner "$owner" --limit 500 --format json \
     --jq '.items | group_by(.status) | map("\(.[0].status // "No status"): \(length)") | .[]' 2>/dev/null \
     || { echo "board status counts: unavailable"; rc=1; }
