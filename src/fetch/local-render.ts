@@ -136,6 +136,28 @@ export async function assertLandedSameSite(
 }
 
 /**
+ * Follow a redirect chain one hop at a time, running `check` on each hop before its request, and return the
+ * final answer, or null once the chain passes MAX_REDIRECT_HOPS. A Location resolves against the current hop,
+ * the way the browser resolves it. A failed check throws and stops the chain before that hop's request.
+ *
+ * Exported for tests: the route handlers around it need a real browser.
+ */
+export async function followRedirects<T extends { location: string | null }>(
+  start: string,
+  check: (hopUrl: string) => Promise<void>,
+  fetchHop: (hopUrl: string) => Promise<T>,
+): Promise<T | null> {
+  let hopUrl = start;
+  for (let hop = 0; hop <= MAX_REDIRECT_HOPS; hop++) {
+    await check(hopUrl);
+    const answer = await fetchHop(hopUrl);
+    if (!answer.location) return answer;
+    hopUrl = new URL(answer.location, hopUrl).toString();
+  }
+  return null;
+}
+
+/**
  * Can the local render rung actually run here?
  *
  * Exists because a CONSUMER cannot answer this correctly. Inferring it with
@@ -217,25 +239,19 @@ export async function renderViaLocalChromium(
     const pinnedFetch = pooledFetchFor(dnsLookup);
     await page.route('**/*', async (route) => {
       const request = route.request();
+      const fetchHop = (hopUrl: string) => pinnedRequest(pinnedFetch, request, hopUrl);
       // An iframe's navigation is checked like a subresource, since a page may embed another public site.
       if (!request.isNavigationRequest() || request.frame() !== page.mainFrame()) {
         // RENDER-SUBRESOURCE-1: a page's own JavaScript can fetch a service on a private address and land
         // the response in the DOM, which then leaves in `page.content()`. Subresources may come from any
-        // public host, such as a CDN, so only the private-address check applies. A refused one is
-        // aborted and the page still renders.
+        // public host, such as a CDN, so only the private-address check applies, on every hop. A refused
+        // one is aborted and the page still renders.
         try {
-          // A redirected subresource is followed hop by hop, each hop held to the same check.
-          let hopUrl = request.url();
-          let sub: Awaited<ReturnType<typeof pinnedRequest>> | null = null;
-          for (let hop = 0; hop <= MAX_REDIRECT_HOPS; hop++) {
-            await assertHostResolvesToPublicAddress(new URL(hopUrl).hostname, dnsLookup);
-            const answer = await pinnedRequest(pinnedFetch, request, hopUrl);
-            if (!answer.location) {
-              sub = answer;
-              break;
-            }
-            hopUrl = new URL(answer.location, hopUrl).toString();
-          }
+          const sub = await followRedirects(
+            request.url(),
+            (hopUrl) => assertHostResolvesToPublicAddress(new URL(hopUrl).hostname, dnsLookup),
+            fetchHop,
+          );
           if (!sub || sub.capped) {
             await route.abort();
             return;
@@ -251,17 +267,14 @@ export async function renderViaLocalChromium(
       let current = request.url();
       let final: Awaited<ReturnType<typeof pinnedRequest>> | null = null;
       try {
-        for (let hop = 0; hop <= MAX_REDIRECT_HOPS; hop++) {
-          await assertLandedSameSite(current, url, dnsLookup);
-          const response = await pinnedRequest(pinnedFetch, request, current);
-          if (!response.location) {
-            final = response;
-            break;
-          }
-          // Resolved against the CURRENT hop, so a relative Location behaves
-          // the way the browser would have resolved it.
-          current = new URL(response.location, current).toString();
-        }
+        final = await followRedirects(
+          current,
+          (hopUrl) => {
+            current = hopUrl;
+            return assertLandedSameSite(hopUrl, url, dnsLookup);
+          },
+          fetchHop,
+        );
       } catch (error) {
         blockedHops.push(`${current}: ${error instanceof Error ? error.message : String(error)}`);
         await route.abort();

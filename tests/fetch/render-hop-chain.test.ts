@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { readFileSync } from 'node:fs';
+import { followRedirects } from '@/fetch/local-render';
 
 // RENDER-HOP-2: the render rung must follow redirects ITSELF.
 //
@@ -10,14 +11,9 @@ import { readFileSync } from 'node:fs';
 // three responses arrived — the off-site server received a real request, and
 // the post-goto landing check passed because the chain came home.
 //
-// A guard that is present and correct but never invoked is the failure mode
-// this file exists to prevent, so these assertions are about WIRING and say nothing about
-// the guard's logic (that is covered where the guard lives).
-//
-// playwright's import is deliberately invisible to bundlers, so the function
-// around it cannot be mocked and the wiring cannot be asserted behaviourally.
-// The live suite drives the real chain; this keeps a refactor from undoing it
-// without a browser present.
+// The hop walker is driven directly below. playwright's import is deliberately invisible to bundlers,
+// so the route handler around it cannot be mocked, and its wiring is asserted on the source instead.
+// The live suite drives the real chain.
 
 const source = readFileSync(new URL('../../src/fetch/local-render.ts', import.meta.url), 'utf8');
 // Anchored on the comment INSIDE the handler and never on the decision id — the id
@@ -46,7 +42,10 @@ describe('the render rung follows redirects itself', () => {
     const helper = readFileSync(new URL('../../src/fetch/render-transport.ts', import.meta.url), 'utf8');
     expect(helper).toMatch(/redirect:\s*'manual'/);
     expect(source).toMatch(/const pinnedFetch = pooledFetchFor\(dnsLookup\)/);
-    expect(navigationBranch).toMatch(/pinnedRequest\(pinnedFetch, request, current\)/);
+    expect(source).toMatch(/const fetchHop = \(hopUrl: string\) => pinnedRequest\(pinnedFetch, request, hopUrl\)/);
+    expect(navigationBranch).toMatch(/followRedirects\(/);
+    expect(navigationBranch).toMatch(/assertLandedSameSite\(hopUrl, url, dnsLookup\)/);
+    expect(navigationBranch).toMatch(/fetchHop/);
   });
 
   test('the navigation branch does not hand the request back to Chromium', () => {
@@ -55,19 +54,62 @@ describe('the render rung follows redirects itself', () => {
     expect(navigationBranch).not.toMatch(/route\.continue\(\)/);
   });
 
-  test('each hop is validated before its request is made', () => {
-    const guardAt = navigationBranch.indexOf('assertLandedSameSite');
-    const fetchAt = navigationBranch.indexOf('pinnedRequest(');
-    expect(guardAt).toBeGreaterThan(-1);
-    expect(fetchAt).toBeGreaterThan(-1);
-    // Order is the point. Validating after the fetch is the original bug in a
-    // new shape: the private server has already received the request.
-    expect(guardAt).toBeLessThan(fetchAt);
+});
+
+describe('followRedirects walks a chain hop by hop', () => {
+  const redirect = (location: string) => ({ location });
+  const landed = { location: null, body: 'page' };
+
+  test('each hop is checked before its request is made', async () => {
+    // Order is the point. Checking after the fetch is the original bug in a new shape: the private
+    // server has already received the request.
+    const events: string[] = [];
+    const chain: Record<string, { location: string | null }> = {
+      'https://site.example.com/a': redirect('/b'),
+      'https://site.example.com/b': landed,
+    };
+    const answer = await followRedirects(
+      'https://site.example.com/a',
+      async (hop) => void events.push(`check ${hop}`),
+      async (hop) => (events.push(`fetch ${hop}`), chain[hop]!),
+    );
+    expect(answer).toBe(landed);
+    expect(events).toEqual([
+      'check https://site.example.com/a',
+      'fetch https://site.example.com/a',
+      'check https://site.example.com/b',
+      'fetch https://site.example.com/b',
+    ]);
   });
 
-  test('the chain is bounded', () => {
-    // Following redirects by hand means owning the loop, and a loop without a
-    // ceiling is a spin.
-    expect(navigationBranch).toMatch(/MAX_REDIRECT_HOPS/);
+  test('a refused hop is never requested', async () => {
+    const fetched: string[] = [];
+    const walk = followRedirects(
+      'https://site.example.com/a',
+      async (hop) => {
+        if (hop.includes('127.0.0.1')) throw new Error('Blocked private address');
+      },
+      async (hop) => (fetched.push(hop), hop.endsWith('/a') ? redirect('http://127.0.0.1:8080/x') : landed),
+    );
+    await expect(walk).rejects.toThrow(/Blocked/);
+    expect(fetched).toEqual(['https://site.example.com/a']);
+  });
+
+  test('the chain is bounded', async () => {
+    // Following redirects by hand means owning the loop, and a loop without a ceiling is a spin.
+    let requests = 0;
+    const answer = await followRedirects('https://site.example.com/loop', async () => {}, async () => (requests++, redirect('/loop')));
+    expect(answer).toBeNull();
+    expect(requests).toBe(6);
+  });
+
+  test('a relative Location resolves against the current hop', async () => {
+    const fetched: string[] = [];
+    await followRedirects(
+      'https://site.example.com/dir/a',
+      async () => {},
+      async (hop) => (fetched.push(hop), fetched.length === 1 ? redirect('b') : landed),
+    );
+    expect(fetched[1]).toBe('https://site.example.com/dir/b');
   });
 });
