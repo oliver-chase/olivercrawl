@@ -3,17 +3,12 @@ import { createCrawler } from '@/index';
 import { crawlSite, crawlSites } from '@/crawl-site';
 import type { CrawlStore, CrawlState } from '@/crawl-store';
 import type { CrawlTarget, UsageEvent } from '@/core/types';
-import { publicDns } from '../helpers';
+import { linkedDoc as doc, publicDns, site } from '../helpers';
 
 // Behavior the first QA pass found unproven: eight in flight, Crawl-delay under concurrency, per-host reports
 // across hosts, a store that holds only JSON, and no fetch once a host turns private.
 
 const ua = 'T/1 (+https://t.example/bot)';
-const site = (host: string): CrawlTarget => ({ baseUrl: `https://${host}`, robotsPolicy: 'allow', active: true });
-const doc = (links: string[] = []) =>
-  `<html><head><title>T</title></head><body><main><p>Weekly concerts at the riverside stage all summer long.</p>${links
-    .map((l) => `<a href="${l}">x</a>`)
-    .join('')}</main></body></html>`;
 const html = { 'content-type': 'text/html; charset=utf-8' };
 
 describe('eight requests in flight', () => {

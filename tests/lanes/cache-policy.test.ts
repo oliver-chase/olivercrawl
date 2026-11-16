@@ -1,16 +1,13 @@
 import { describe, expect, test } from 'vitest';
 import { createCrawler } from '@/index';
 import type { CrawlTarget } from '@/core/types';
+import { htmlPage } from '../helpers';
 
 // CACHE-POLICY-1: the page cache is keyed on (url, lanes) and never on the
 // target. If a cache hit is served before policy runs, a second target can
 // read a page it was never allowed to fetch.
 
-const html = () =>
-  new Response(
-    '<html><head><title>T</title></head><body><main><p>Concerts every Friday evening at the riverside stage.</p></main></body></html>',
-    { status: 200, headers: { 'content-type': 'text/html; charset=utf-8' } },
-  );
+const html = () => htmlPage('<p>Concerts every Friday evening at the riverside stage.</p>');
 
 const crawler = () =>
   createCrawler({

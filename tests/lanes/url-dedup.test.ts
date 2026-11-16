@@ -2,7 +2,7 @@ import { describe, expect, test } from 'vitest';
 import { createCrawler } from '@/index';
 import { crawlSite } from '@/crawl-site';
 import type { CrawlTarget } from '@/core/types';
-import { publicDns } from '../helpers';
+import { htmlPage as page, publicDns } from '../helpers';
 
 // URL-DEDUP-1: one page reachable under several spellings must be crawled
 // ONCE. A site that links its calendar as /events, /events/, /events#lineup
@@ -11,12 +11,6 @@ import { publicDns } from '../helpers';
 
 const target: CrawlTarget = { baseUrl: 'https://venue.example.com', robotsPolicy: 'allow', active: true };
 
-function page(body: string) {
-  return new Response(`<html><head><title>T</title></head><body><main>${body}</main></body></html>`, {
-    status: 200,
-    headers: { 'content-type': 'text/html; charset=utf-8' },
-  });
-}
 
 describe('one page under many spellings is crawled once', () => {
   test('trailing slash, fragment and tracking params collapse', async () => {

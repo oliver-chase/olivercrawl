@@ -2,15 +2,9 @@ import { describe, expect, test } from 'vitest';
 import { createCrawler } from '@/index';
 import { crawlSite, crawlSites } from '@/crawl-site';
 import type { CrawlProgress } from '@/crawl-site';
-import type { CrawlTarget } from '@/core/types';
-import { publicDns } from '../helpers';
+import { linkedDoc as page, publicDns, site } from '../helpers';
 
 // CRAWL-PARALLEL-1: crawlSite is sequential unless asked, and `perHostConcurrency` keeps any one origin to its limit.
-
-const page = (links: string[]) =>
-  `<html><head><title>T</title></head><body><main><p>Weekly concerts at the riverside stage all summer long.</p>${links
-    .map((l) => `<a href="${l}">x</a>`)
-    .join('')}</main></body></html>`;
 
 /** A fake web that records the peak number of requests in flight, overall and per host. */
 function web(latencyMs: number) {
@@ -34,7 +28,6 @@ function web(latencyMs: number) {
 }
 
 const crawler = () => createCrawler({ userAgent: 'T/1 (+https://t.example/bot)', dnsLookup: publicDns });
-const site = (host: string): CrawlTarget => ({ baseUrl: `https://${host}`, robotsPolicy: 'allow', active: true });
 
 describe('crawlSite concurrency', () => {
   test('defaults to one request at a time', async () => {

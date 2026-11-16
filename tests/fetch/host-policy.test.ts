@@ -46,58 +46,25 @@ describe('assertHostResolvesToPublicAddress — DNS rebinding defence', () => {
     await expect(assertHostResolvesToPublicAddress(host, lookupTo(address))).rejects.toThrow(/private IPv4/i);
   });
 
-  // AWS/GCP/Azure instance metadata — the highest-value SSRF target there is.
-  test('blocks the cloud metadata address (169.254.169.254)', async () => {
-    await expect(
-      assertHostResolvesToPublicAddress('metadata-rebind.example.com', lookupTo('169.254.169.254')),
-    ).rejects.toThrow(/private IPv4/i);
-  });
-
-  test('blocks IPv6 loopback', async () => {
-    await expect(
-      assertHostResolvesToPublicAddress('v6-loopback.example.com', lookupTo('::1', 6)),
-    ).rejects.toThrow(/private IPv6/i);
-  });
-
-  test('blocks an IPv4-mapped IPv6 answer written with dots (fails closed as an invalid address)', async () => {
-    await expect(
-      assertHostResolvesToPublicAddress('v6-mapped.example.com', lookupTo('::ffff:10.0.0.1', 6)),
-    ).rejects.toThrow(/invalid address/i);
-  });
-
-  // A multi-record answer where only ONE entry is internal must still be
-  // rejected — checking just the first record would be exploitable.
-  test('blocks when ANY returned record is private', async () => {
-    const lookup = async () => [
-      { address: '93.184.216.34', family: 4 },
-      { address: '10.1.2.3', family: 4 },
-    ];
-    await expect(assertHostResolvesToPublicAddress('mixed-records.example.com', lookup)).rejects.toThrow(/private IPv4/i);
+  test.each([
+    // AWS/GCP/Azure instance metadata — the highest-value SSRF target there is.
+    ['the cloud metadata address (169.254.169.254)', 'metadata-rebind.example.com', lookupTo('169.254.169.254'), /private IPv4/i],
+    ['IPv6 loopback', 'v6-loopback.example.com', lookupTo('::1', 6), /private IPv6/i],
+    ['an IPv4-mapped IPv6 answer written with dots (fails closed as an invalid address)', 'v6-mapped.example.com', lookupTo('::ffff:10.0.0.1', 6), /invalid address/i],
+    // A multi-record answer where only ONE entry is internal must still be
+    // rejected — checking just the first record would be exploitable.
+    ['a lookup where ANY returned record is private', 'mixed-records.example.com', async () => [{ address: '93.184.216.34', family: 4 }, { address: '10.1.2.3', family: 4 }], /private IPv4/i],
+    ['an empty DNS answer', 'empty-answer.example.com', async () => [], /no addresses/i],
+    ['a malformed address', 'bad-answer.example.com', lookupTo('not-an-ip'), /invalid address/i],
+    ['a resolver failure', 'resolver-down.example.com', async () => Promise.reject(new Error('SERVFAIL')), /DNS lookup failed/i],
+  ])('blocks %s', async (_name, host, lookup, message) => {
+    await expect(assertHostResolvesToPublicAddress(host, lookup)).rejects.toThrow(message);
   });
 
   test('allows a genuinely public address', async () => {
     await expect(
       assertHostResolvesToPublicAddress('public-ok.example.com', lookupTo('93.184.216.34')),
     ).resolves.toBeUndefined();
-  });
-
-  test('rejects an empty DNS answer', async () => {
-    await expect(assertHostResolvesToPublicAddress('empty-answer.example.com', async () => [])).rejects.toThrow(
-      /no addresses/i,
-    );
-  });
-
-  test('rejects a malformed address', async () => {
-    await expect(
-      assertHostResolvesToPublicAddress('bad-answer.example.com', lookupTo('not-an-ip')),
-    ).rejects.toThrow(/invalid address/i);
-  });
-
-  test('surfaces a resolver failure and does not allow the crawl', async () => {
-    const lookup = async () => {
-      throw new Error('SERVFAIL');
-    };
-    await expect(assertHostResolvesToPublicAddress('resolver-down.example.com', lookup)).rejects.toThrow(/DNS lookup failed/i);
   });
 
   // The module caches SAFE hosts to avoid re-resolving. A failure must not
@@ -133,32 +100,17 @@ describe('assertHostResolvesToPublicAddress — DNS rebinding defence', () => {
 });
 
 describe('assertTargetEligible', () => {
-  test('rejects an inactive source', () => {
-    expect(() => assertTargetEligible(makeSource({ active: false }))).toThrow(/inactive/i);
-  });
-
-  test('rejects a disallow robots policy', () => {
-    expect(() => assertTargetEligible(makeSource({ robotsPolicy: 'disallow' }))).toThrow(/robots/i);
-  });
-
-  // Fail-closed: a target whose robots posture was never determined must not
-  // be crawled just because nothing explicitly forbade it.
-  test('rejects an unknown robots policy (fails closed)', () => {
-    expect(() => assertTargetEligible(makeSource({ robotsPolicy: 'unknown' }))).toThrow(/unknown robots/i);
-  });
-
-  test('rejects a non-https base URL', () => {
-    expect(() => assertTargetEligible(makeSource({ baseUrl: 'http://venue.example.com' }))).toThrow(/https/i);
-  });
-
-  test('rejects credentials embedded in the base URL', () => {
-    expect(() =>
-      assertTargetEligible(makeSource({ baseUrl: 'https://user:pass@venue.example.com' })),
-    ).toThrow(/[Cc]redentialed/);
-  });
-
-  test('rejects a base URL pointing at an internal host', () => {
-    expect(() => assertTargetEligible(makeSource({ baseUrl: 'https://localhost' }))).toThrow();
+  test.each<[string, Partial<CrawlTarget>, RegExp | undefined]>([
+    ['an inactive source', { active: false }, /inactive/i],
+    ['a disallow robots policy', { robotsPolicy: 'disallow' }, /robots/i],
+    // Fail-closed: a target whose robots posture was never determined must not
+    // be crawled just because nothing explicitly forbade it.
+    ['an unknown robots policy (fails closed)', { robotsPolicy: 'unknown' }, /unknown robots/i],
+    ['a non-https base URL', { baseUrl: 'http://venue.example.com' }, /https/i],
+    ['credentials embedded in the base URL', { baseUrl: 'https://user:pass@venue.example.com' }, /[Cc]redentialed/],
+    ['a base URL pointing at an internal host', { baseUrl: 'https://localhost' }, undefined],
+  ])('rejects %s', (_name, overrides, message) => {
+    expect(() => assertTargetEligible(makeSource(overrides))).toThrow(message);
   });
 
   test('accepts a well-formed public https source', () => {
@@ -181,34 +133,18 @@ describe('assertRequestUrlAllowed — same-site enforcement', () => {
     expect(() => assertRequestUrlAllowed(wwwSource, 'https://venue.example.com/events')).not.toThrow();
   });
 
-  test('blocks a genuinely different host', () => {
-    expect(() => assertRequestUrlAllowed(source, 'https://evil.example.net/events')).toThrow(/off-domain/i);
-  });
-
-  // A subdomain is a different site — this is the shape an attacker gets
-  // from a page that links its own CDN/user-content host.
-  test('blocks an unrelated subdomain of the same registrable domain', () => {
-    expect(() => assertRequestUrlAllowed(source, 'https://uploads.venue.example.com/x')).toThrow(/off-domain/i);
-  });
-
-  test('blocks a host that merely has the base host as a suffix', () => {
-    expect(() => assertRequestUrlAllowed(source, 'https://notvenue.example.com/events')).toThrow(/off-domain/i);
-  });
-
-  test('blocks non-https', () => {
-    expect(() => assertRequestUrlAllowed(source, 'http://venue.example.com/events')).toThrow(/non-https/i);
-  });
-
-  test('blocks credentialed URLs', () => {
-    expect(() => assertRequestUrlAllowed(source, 'https://u:p@venue.example.com/e')).toThrow(/[Cc]redentialed/);
-  });
-
-  test('blocks a cross-port URL on the same host', () => {
-    expect(() => assertRequestUrlAllowed(source, 'https://venue.example.com:8443/events')).toThrow(/cross-port/i);
-  });
-
-  test('blocks an unparseable URL', () => {
-    expect(() => assertRequestUrlAllowed(source, 'not a url')).toThrow(/Invalid crawl URL/i);
+  test.each([
+    ['a genuinely different host', 'https://evil.example.net/events', /off-domain/i],
+    // A subdomain is a different site — this is the shape an attacker gets
+    // from a page that links its own CDN/user-content host.
+    ['an unrelated subdomain of the same registrable domain', 'https://uploads.venue.example.com/x', /off-domain/i],
+    ['a host that merely has the base host as a suffix', 'https://notvenue.example.com/events', /off-domain/i],
+    ['non-https', 'http://venue.example.com/events', /non-https/i],
+    ['credentialed URLs', 'https://u:p@venue.example.com/e', /[Cc]redentialed/],
+    ['a cross-port URL on the same host', 'https://venue.example.com:8443/events', /cross-port/i],
+    ['an unparseable URL', 'not a url', /Invalid crawl URL/i],
+  ])('blocks %s', (_name, url, message) => {
+    expect(() => assertRequestUrlAllowed(source, url)).toThrow(message);
   });
 });
 
@@ -219,16 +155,12 @@ describe('assertRedirectUrlAllowed / ForHost — redirect following', () => {
     expect(() => assertRedirectUrlAllowed(source, 'https://www.venue.example.com/events/')).not.toThrow();
   });
 
-  test('refuses to follow a redirect to another host', () => {
-    expect(() => assertRedirectUrlAllowed(source, 'https://tracker.example.net/r?u=1')).toThrow(/off-domain/i);
-  });
-
-  test('refuses an https-to-http downgrade redirect', () => {
-    expect(() => assertRedirectUrlAllowed(source, 'http://venue.example.com/events')).toThrow(/non-https/i);
-  });
-
-  test('refuses a redirect to an internal host', () => {
-    expect(() => assertRedirectUrlAllowed(source, 'https://localhost/admin')).toThrow();
+  test.each([
+    ['a redirect to another host', 'https://tracker.example.net/r?u=1', /off-domain/i],
+    ['an https-to-http downgrade redirect', 'http://venue.example.com/events', /non-https/i],
+    ['a redirect to an internal host', 'https://localhost/admin', undefined],
+  ])('refuses %s', (_name, url, message) => {
+    expect(() => assertRedirectUrlAllowed(source, url)).toThrow(message);
   });
 
   // The URL-only variant used where no source record exists.

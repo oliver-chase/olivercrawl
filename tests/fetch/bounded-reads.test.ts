@@ -3,24 +3,12 @@ import { discoverSitemapUrls } from '@/fetch/sitemap-discovery';
 import { fetchViaJina } from '@/fetch/jina-fetch';
 import { safeFetch } from '@/fetch/safe-fetch';
 import type { CrawlTarget } from '@/core/types';
-import { publicDns } from '../helpers';
+import { endlessBody, publicDns } from '../helpers';
 
 // Every network read stops at its cap, redirects stay on the target's site, and the caller's
 // user agent and resolver reach the wire.
 
 const target: CrawlTarget = { name: 'Site', baseUrl: 'https://site.example.com', robotsPolicy: 'allow', active: true };
-
-/** A body that never ends, counting the bytes the reader pulled. */
-function endlessBody(counter: { bytes: number }): Response {
-  const chunk = new Uint8Array(64 * 1024).fill(97);
-  const stream = new ReadableStream<Uint8Array>({
-    pull(controller) {
-      counter.bytes += chunk.byteLength;
-      controller.enqueue(chunk);
-    },
-  });
-  return new Response(stream, { status: 200, headers: { 'content-type': 'text/plain' } });
-}
 
 describe('bounded reads', () => {
   test('a sitemap that never ends is cut near the cap', async () => {

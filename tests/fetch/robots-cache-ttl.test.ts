@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { createCrawler } from '@/index';
 import { ROBOTS_CACHE_TTL_MS, ROBOTS_FAILURE_TTL_MS } from '@/lanes/own/index';
 import type { CrawlTarget } from '@/core/types';
-import { publicDns } from '../helpers';
+import { htmlPage, publicDns } from '../helpers';
 
 // ROBOTS-TTL-1: the robots cache had no expiry, so a long-lived process could
 // (a) keep crawling a site that later added a Disallow, and (b) permanently
@@ -17,11 +17,7 @@ beforeEach(() => {
   vi.setSystemTime(new Date('2026-07-27T12:00:00Z'));
 });
 
-const html = () =>
-  new Response(
-    '<html><head><title>T</title></head><body><main><p>The outdoor concert series runs Friday evenings at the riverside stage.</p></main></body></html>',
-    { status: 200, headers: { 'content-type': 'text/html; charset=utf-8' } },
-  );
+const html = () => htmlPage('<p>The outdoor concert series runs Friday evenings at the riverside stage.</p>');
 
 function stub(robots: () => Response) {
   const robotsHits = { count: 0 };

@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import { createCrawler } from '@/index';
 import type { CrawlPage, CrawlTarget } from '@/core/types';
-import { publicDns } from '../helpers';
+import { htmlResponse as html, publicDns } from '../helpers';
 
 // PAGE-SHAPE-1: every rung must return a COMPLETE and self-consistent page.
 //
@@ -77,8 +77,6 @@ function assertPageShape(page: CrawlPage, expected: { rung: string; lane: string
 function serve(handler: (url: string) => Response) {
   globalThis.fetch = (async (input: RequestInfo | URL) => handler(String(input))) as typeof fetch;
 }
-
-const html = (body: string) => new Response(body, { status: 200, headers: { 'content-type': 'text/html; charset=utf-8' } });
 
 describe('GUARD-TELEMETRY-1 reports real values of the right types', () => {
   // page-shape asserted `typeof` only, so hardcoding redactionCount: 0 and

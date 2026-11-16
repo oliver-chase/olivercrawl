@@ -6,27 +6,27 @@ import { htmlToMarkdown } from '@/extract/html-to-markdown';
 // Each case below is structure an extractor needs that plain text destroys.
 
 const md = (html: string) => htmlToMarkdown(cheerio.load(html), { baseUrl: 'https://venue.example/' });
+const converts = (_name: string, html: string, expected: string) => expect(md(html)).toBe(expected);
 
 describe('links leave as absolute http(s) URLs or as their label', () => {
-  test('a javascript: link keeps its label and loses its target', () => {
-    expect(md('<main><p>Buy <a href="javascript:alert(1)">now</a> today.</p></main>')).toBe('Buy now today.');
-  });
-
-  test('a relative link is resolved against the page URL', () => {
-    expect(md('<main><p><a href="tickets">Tickets</a></p></main>')).toBe('[Tickets](https://venue.example/tickets)');
-  });
-
-  test('a link to a private address keeps only its label', () => {
-    expect(md('<main><p><a href="http://127.0.0.1/admin">Admin</a></p></main>')).toBe('Admin');
-  });
+  test.each([
+    ['a javascript: link keeps its label and loses its target', '<main><p>Buy <a href="javascript:alert(1)">now</a> today.</p></main>', 'Buy now today.'],
+    ['a relative link is resolved against the page URL', '<main><p><a href="tickets">Tickets</a></p></main>', '[Tickets](https://venue.example/tickets)'],
+    ['a link to a private address keeps only its label', '<main><p><a href="http://127.0.0.1/admin">Admin</a></p></main>', 'Admin'],
+    ['parentheses and spaces in an href are percent-encoded', '<main><p>See <a href="/a_(b) c">the page</a> now.</p></main>', 'See [the page](https://venue.example/a_%28b%29%20c) now.'],
+  ])('%s', converts);
 });
 
 describe('structure the page author encoded survives', () => {
-  test('headings keep their level', () => {
-    expect(md('<main><h1>Venue</h1><h2>Summer Series</h2><h3>July</h3></main>')).toBe(
-      '# Venue\n\n## Summer Series\n\n### July',
-    );
-  });
+  test.each([
+    ['headings keep their level', '<main><h1>Venue</h1><h2>Summer Series</h2><h3>July</h3></main>', '# Venue\n\n## Summer Series\n\n### July'],
+    ['lists keep items separate', '<main><ul><li>Free parking</li><li>No coolers</li></ul></main>', '- Free parking\n- No coolers'],
+    ['ordered lists are numbered', '<main><ol><li>Arrive</li><li>Check in</li></ol></main>', '1. Arrive\n2. Check in'],
+    ['links keep text attached to href', '<main><p>See the <a href="/calendar">full calendar</a> online.</p></main>', 'See the [full calendar](https://venue.example/calendar) online.'],
+    // Alt text is often the ONLY description of a flyer.
+    ['image alt text is kept', '<main><img src="/flyer.jpg" alt="Concert July 11 at 7pm"></main>', '![Concert July 11 at 7pm](https://venue.example/flyer.jpg)'],
+    ['emphasis is preserved', '<main><p>Doors at <strong>6pm</strong>, show at <em>7pm</em>.</p></main>', 'Doors at **6pm**, show at *7pm*.'],
+  ])('%s', converts);
 
   test('a schedule table keeps its columns', () => {
     // The case that motivated this: flattened, "7:00 PM" loses the column
@@ -41,33 +41,6 @@ describe('structure the page author encoded survives', () => {
     expect(out).toContain('| --- | --- | --- |');
     expect(out).toContain('| July 11 | Test Band A | 7:00 PM |');
     expect(out).toContain('| July 18 | Test Band B | 7:30 PM |');
-  });
-
-  test('lists keep items separate', () => {
-    expect(md('<main><ul><li>Free parking</li><li>No coolers</li></ul></main>')).toBe('- Free parking\n- No coolers');
-  });
-
-  test('ordered lists are numbered', () => {
-    expect(md('<main><ol><li>Arrive</li><li>Check in</li></ol></main>')).toBe('1. Arrive\n2. Check in');
-  });
-
-  test('links keep text attached to href', () => {
-    expect(md('<main><p>See the <a href="/calendar">full calendar</a> online.</p></main>')).toBe(
-      'See the [full calendar](https://venue.example/calendar) online.',
-    );
-  });
-
-  test('image alt text is kept', () => {
-    // Often the ONLY description of a flyer.
-    expect(md('<main><img src="/flyer.jpg" alt="Concert July 11 at 7pm"></main>')).toBe(
-      '![Concert July 11 at 7pm](https://venue.example/flyer.jpg)',
-    );
-  });
-
-  test('emphasis is preserved', () => {
-    expect(md('<main><p>Doors at <strong>6pm</strong>, show at <em>7pm</em>.</p></main>')).toBe(
-      'Doors at **6pm**, show at *7pm*.',
-    );
   });
 });
 
@@ -260,31 +233,12 @@ describe('MARKDOWN-DATAURI-1 — inline data URIs must not reach the guard', () 
 });
 
 describe('inline content is not split by its container', () => {
-  test('a sentence with bold text and a link inside a div stays one paragraph', () => {
-    expect(md('<main><div>Doors at <b>seven</b> and <a href="/tickets">tickets</a> are free.</div></main>')).toBe(
-      'Doors at **seven** and [tickets](https://venue.example/tickets) are free.',
-    );
-  });
-
-  test('a run of bare links keeps one block per link', () => {
-    expect(md('<main><div><a href="/a">Alpha</a> <a href="/b">Beta</a></div></main>')).toBe('[Alpha](https://venue.example/a)\n\n[Beta](https://venue.example/b)');
-  });
-
-  test('a blockquote with two paragraphs keeps them apart', () => {
-    expect(md('<main><blockquote><p>First line.</p><p>Second line.</p></blockquote></main>')).toBe(
-      '> First line.\n>\n> Second line.',
-    );
-  });
-
-  test('a nested list keeps its words apart and its depth', () => {
-    expect(md('<main><ul><li>one<ul><li>nested</li></ul></li><li>two</li></ul></main>')).toBe('- one\n  - nested\n- two');
-  });
-});
-
-describe('link targets stay valid Markdown', () => {
-  test('parentheses and spaces in an href are percent-encoded', () => {
-    expect(md('<main><p>See <a href="/a_(b) c">the page</a> now.</p></main>')).toBe('See [the page](https://venue.example/a_%28b%29%20c) now.');
-  });
+  test.each([
+    ['a sentence with bold text and a link inside a div stays one paragraph', '<main><div>Doors at <b>seven</b> and <a href="/tickets">tickets</a> are free.</div></main>', 'Doors at **seven** and [tickets](https://venue.example/tickets) are free.'],
+    ['a run of bare links keeps one block per link', '<main><div><a href="/a">Alpha</a> <a href="/b">Beta</a></div></main>', '[Alpha](https://venue.example/a)\n\n[Beta](https://venue.example/b)'],
+    ['a blockquote with two paragraphs keeps them apart', '<main><blockquote><p>First line.</p><p>Second line.</p></blockquote></main>', '> First line.\n>\n> Second line.'],
+    ['a nested list keeps its words apart and its depth', '<main><ul><li>one<ul><li>nested</li></ul></li><li>two</li></ul></main>', '- one\n  - nested\n- two'],
+  ])('%s', converts);
 });
 
 describe('regions that wrap content', () => {

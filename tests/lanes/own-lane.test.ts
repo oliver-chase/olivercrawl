@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import { createCrawler } from '@/index';
 import type { CrawlTarget, UsageEvent } from '@/core/types';
-import { publicDns } from '../helpers';
+import { htmlResponse, publicDns } from '../helpers';
 
 // The own lane end-to-end, against a stubbed network. Everything here is
 // offline and deterministic: fetch and DNS are both injected/stubbed, so
@@ -14,15 +14,6 @@ const target: CrawlTarget = {
   robotsPolicy: 'allow',
   active: true,
 };
-
-function htmlResponse(body: string, init: { status?: number; headers?: Record<string, string>; url?: string } = {}) {
-  const response = new Response(body, {
-    status: init.status ?? 200,
-    headers: { 'content-type': 'text/html', ...(init.headers ?? {}) },
-  });
-  if (init.url) Object.defineProperty(response, 'url', { value: init.url });
-  return response;
-}
 
 describe('own lane — happy path', () => {
   test('extracts text, title, JSON-LD, links and hashes', async () => {

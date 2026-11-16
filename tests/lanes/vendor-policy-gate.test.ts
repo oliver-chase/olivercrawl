@@ -31,37 +31,18 @@ const crawler = () =>
   });
 
 describe('vendor-only crawls are still governed', () => {
-  test('an off-domain URL is blocked before any vendor is paid', async () => {
+  test.each<[string, CrawlTarget, string]>([
+    ['an off-domain URL is blocked before any vendor is paid', { baseUrl: 'https://venue.example.com', robotsPolicy: 'allow', active: true }, 'https://evil.example.net/page'],
+    ['unknown robots posture fails closed even with a paid key', { baseUrl: 'https://venue.example.com', active: true }, 'https://venue.example.com/events'],
+    ['an inactive target is refused for the vendor lane too', { baseUrl: 'https://venue.example.com', robotsPolicy: 'allow', active: false }, 'https://venue.example.com/events'],
+  ])('%s', async (_name, target, url) => {
     const calls = vendorStub();
-    const target: CrawlTarget = { baseUrl: 'https://venue.example.com', robotsPolicy: 'allow', active: true };
 
-    const result = await crawler().crawl(target, 'https://evil.example.net/page', { lanes: ['vendor'] });
+    const result = await crawler().crawl(target, url, { lanes: ['vendor'] });
 
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error('expected blocked');
     expect(result.reason).toBe('blocked');
-    expect(calls.some((u) => u.includes('firecrawl'))).toBe(false);
-  });
-
-  test('unknown robots posture fails closed even with a paid key', async () => {
-    const calls = vendorStub();
-    const target: CrawlTarget = { baseUrl: 'https://venue.example.com', active: true };
-
-    const result = await crawler().crawl(target, 'https://venue.example.com/events', { lanes: ['vendor'] });
-
-    expect(result.ok).toBe(false);
-    if (result.ok) throw new Error('expected blocked');
-    expect(result.reason).toBe('blocked');
-    expect(calls.some((u) => u.includes('firecrawl'))).toBe(false);
-  });
-
-  test('an inactive target is refused for the vendor lane too', async () => {
-    const calls = vendorStub();
-    const target: CrawlTarget = { baseUrl: 'https://venue.example.com', robotsPolicy: 'allow', active: false };
-
-    const result = await crawler().crawl(target, 'https://venue.example.com/events', { lanes: ['vendor'] });
-
-    expect(result.ok).toBe(false);
     expect(calls.some((u) => u.includes('firecrawl'))).toBe(false);
   });
 

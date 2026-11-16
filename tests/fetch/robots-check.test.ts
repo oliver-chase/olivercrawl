@@ -12,54 +12,25 @@ import { parseRobots, evaluateRobotsForUrl, userAgentToken } from '@/fetch/robot
 const UA = 'examplebot';
 
 describe('parseRobots', () => {
-  test('empty robots.txt = allow', () => {
-    expect(parseRobots('', UA, '/events').policy).toBe('allow');
-  });
-
-  test('User-agent: * Allow: / = allow (wildcard allow)', () => {
-    const txt = 'User-agent: *\nAllow: /\n\nUser-agent: GPTBot\nDisallow: /';
-    expect(parseRobots(txt, UA, '/events-concerts/').policy).toBe('allow');
-  });
-
-  test('named AI-bot disallow does not affect the configured bot', () => {
-    const txt = 'User-agent: ClaudeBot\nDisallow: /\nUser-agent: GPTBot\nDisallow: /\nUser-agent: *\nAllow: /';
-    expect(parseRobots(txt, UA, '/whatever').policy).toBe('allow');
-  });
-
-  test('global Disallow: / = disallow', () => {
-    expect(parseRobots('User-agent: *\nDisallow: /', UA, '/events').policy).toBe('disallow');
-  });
-
-  test('empty Disallow means allow everything', () => {
-    expect(parseRobots('User-agent: *\nDisallow:', UA, '/events').policy).toBe('allow');
-  });
-
-  test('path-specific disallow blocks only that path', () => {
-    const txt = 'User-agent: *\nDisallow: /admin';
-    expect(parseRobots(txt, UA, '/admin/secret').policy).toBe('disallow');
-    expect(parseRobots(txt, UA, '/events').policy).toBe('allow');
-  });
-
-  test('Allow overrides a longer... shorter Disallow via longest-match', () => {
-    const txt = 'User-agent: *\nDisallow: /events\nAllow: /events/public';
-    expect(parseRobots(txt, UA, '/events/public/x').policy).toBe('allow');
-    expect(parseRobots(txt, UA, '/events/private').policy).toBe('disallow');
-  });
-
-  test('an agent-specific group wins over *', () => {
-    const txt = 'User-agent: *\nDisallow: /\nUser-agent: ExampleBot\nAllow: /';
-    expect(parseRobots(txt, UA, '/events').policy).toBe('allow');
-  });
-
-  test('$ end-anchor honored', () => {
-    const txt = 'User-agent: *\nDisallow: /*.pdf$';
-    expect(parseRobots(txt, UA, '/a/b.pdf').policy).toBe('disallow');
-    expect(parseRobots(txt, UA, '/a/b.pdf?x=1').policy).toBe('allow');
-  });
-
-  test('comments and non-standard directives ignored', () => {
-    const txt = '# hello\nContent-Signal: search=yes\nSitemap: https://x/sitemap.xml\nUser-agent: *\nAllow: / # inline';
-    expect(parseRobots(txt, UA, '/events').policy).toBe('allow');
+  const adminOnly = 'User-agent: *\nDisallow: /admin';
+  const longestMatch = 'User-agent: *\nDisallow: /events\nAllow: /events/public';
+  const pdfAnchor = 'User-agent: *\nDisallow: /*.pdf$';
+  test.each([
+    ['empty robots.txt = allow', '', '/events', 'allow'],
+    ['User-agent: * Allow: / = allow (wildcard allow)', 'User-agent: *\nAllow: /\n\nUser-agent: GPTBot\nDisallow: /', '/events-concerts/', 'allow'],
+    ['named AI-bot disallow does not affect the configured bot', 'User-agent: ClaudeBot\nDisallow: /\nUser-agent: GPTBot\nDisallow: /\nUser-agent: *\nAllow: /', '/whatever', 'allow'],
+    ['global Disallow: / = disallow', 'User-agent: *\nDisallow: /', '/events', 'disallow'],
+    ['empty Disallow means allow everything', 'User-agent: *\nDisallow:', '/events', 'allow'],
+    ['path-specific disallow blocks that path', adminOnly, '/admin/secret', 'disallow'],
+    ['path-specific disallow leaves other paths', adminOnly, '/events', 'allow'],
+    ['a longer Allow overrides a shorter Disallow via longest-match', longestMatch, '/events/public/x', 'allow'],
+    ['the shorter Disallow still holds outside the Allow', longestMatch, '/events/private', 'disallow'],
+    ['an agent-specific group wins over *', 'User-agent: *\nDisallow: /\nUser-agent: ExampleBot\nAllow: /', '/events', 'allow'],
+    ['$ end-anchor honored on an exact match', pdfAnchor, '/a/b.pdf', 'disallow'],
+    ['$ end-anchor honored when a query follows', pdfAnchor, '/a/b.pdf?x=1', 'allow'],
+    ['comments and non-standard directives ignored', '# hello\nContent-Signal: search=yes\nSitemap: https://x/sitemap.xml\nUser-agent: *\nAllow: / # inline', '/events', 'allow'],
+  ])('%s', (_name, txt, path, expected) => {
+    expect(parseRobots(txt, UA, path).policy).toBe(expected);
   });
 });
 

@@ -11,48 +11,25 @@ const target: CrawlTarget = { baseUrl: 'https://venue.example.com', robotsPolicy
 
 // CRAWL-DEGRADE-1 — one bit: is retrying worth it?
 describe('failure classification', () => {
-  test('policy decisions are structural — retrying re-makes the same decision', () => {
-    expect(classifyFailure('blocked', 'Target is inactive')).toBe('structural');
-    expect(classifyFailure('quarantined', 'injection signals')).toBe('structural');
-    expect(classifyFailure('no_lane_available', 'no key')).toBe('structural');
-  });
-
-  test('transport trouble is transient', () => {
-    expect(classifyFailure('unreachable', 'ECONNRESET')).toBe('transient');
-    expect(classifyFailure('unreachable', 'The operation timed out')).toBe('transient');
-    expect(classifyFailure('unreachable', 'HTTP 503 from origin')).toBe('transient');
-  });
-
-  test('a page that is genuinely gone is structural', () => {
-    expect(classifyFailure('unreachable', 'HTTP 404 Not Found')).toBe('structural');
-    expect(classifyFailure('unreachable', 'HTTP 410 Gone')).toBe('structural');
-  });
-
-  test('a status number outside an HTTP token, such as a duration, is not a status', () => {
-    expect(classifyFailure('unreachable', 'The operation timed out after 410 ms')).toBe('transient');
-  });
-
-  test('a 403 is TRANSIENT — it is a bot wall far more often than a refusal', () => {
-    // Treating 403 as structural would retire sources that work next run.
-    expect(classifyFailure('unreachable', 'HTTP 403 Forbidden')).toBe('transient');
-  });
-
-  test('an unsupported content-type will never become supported', () => {
-    expect(classifyFailure('empty', 'Unsupported content-type: image/png')).toBe('structural');
-  });
-
-  test('a page that rendered nothing today may render something tomorrow', () => {
-    expect(classifyFailure('empty', 'No visible text in the served HTML')).toBe('transient');
-  });
-
-  test('a missing optional parser is structural — it needs an install', () => {
-    expect(
-      classifyFailure('empty', 'PDF support needs the optional `unpdf` package. Run `npm install unpdf` to enable it.'),
-    ).toBe('structural');
-  });
-
-  test('a PDF with no text layer is structural — it needs a vision model', () => {
-    expect(classifyFailure('empty', 'PDF has no text layer (likely scanned images)')).toBe('structural');
+  test.each<[string, Parameters<typeof classifyFailure>[0], string, ReturnType<typeof classifyFailure>]>([
+    // Policy decisions are structural: retrying re-makes the same decision.
+    ['an inactive target', 'blocked', 'Target is inactive', 'structural'],
+    ['a quarantine', 'quarantined', 'injection signals', 'structural'],
+    ['no lane available', 'no_lane_available', 'no key', 'structural'],
+    ['a connection reset', 'unreachable', 'ECONNRESET', 'transient'],
+    ['a timeout', 'unreachable', 'The operation timed out', 'transient'],
+    ['a 503', 'unreachable', 'HTTP 503 from origin', 'transient'],
+    ['a page that is genuinely gone (404)', 'unreachable', 'HTTP 404 Not Found', 'structural'],
+    ['a page that is genuinely gone (410)', 'unreachable', 'HTTP 410 Gone', 'structural'],
+    ['a status number outside an HTTP token, such as a duration', 'unreachable', 'The operation timed out after 410 ms', 'transient'],
+    // A 403 is a bot wall far more often than a refusal. Treating it as structural would retire sources that work next run.
+    ['a 403', 'unreachable', 'HTTP 403 Forbidden', 'transient'],
+    ['an unsupported content-type, which will never become supported', 'empty', 'Unsupported content-type: image/png', 'structural'],
+    ['a page that rendered nothing today, which may render something tomorrow', 'empty', 'No visible text in the served HTML', 'transient'],
+    ['a missing optional parser, which needs an install', 'empty', 'PDF support needs the optional `unpdf` package. Run `npm install unpdf` to enable it.', 'structural'],
+    ['a PDF with no text layer, which needs a vision model', 'empty', 'PDF has no text layer (likely scanned images)', 'structural'],
+  ])('classifies %s', (_name, reason, detail, expected) => {
+    expect(classifyFailure(reason, detail)).toBe(expected);
   });
 
   test('a real crawl failure carries the class', async () => {

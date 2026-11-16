@@ -3,7 +3,7 @@ import { createCrawler } from '@/index';
 import { crawlSite } from '@/crawl-site';
 import { createMemoryCrawlStore } from '@/crawl-store';
 import type { CrawlTarget } from '@/core/types';
-import { publicDns } from '../helpers';
+import { htmlPage as page, publicDns } from '../helpers';
 
 // The multi-page orchestrator. Everything it does that a single page cannot
 // decide for itself: which URLs, how many, retry policy, dedup, and reporting
@@ -16,11 +16,6 @@ const target: CrawlTarget = {
   active: true,
 };
 
-const page = (body: string) =>
-  new Response(`<html><head><title>T</title></head><body><main>${body}</main></body></html>`, {
-    status: 200,
-    headers: { 'content-type': 'text/html' },
-  });
 
 function crawler() {
   return createCrawler({ userAgent: 'T/1', dnsLookup: publicDns });

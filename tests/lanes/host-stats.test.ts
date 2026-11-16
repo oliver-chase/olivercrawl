@@ -2,15 +2,11 @@ import { describe, expect, test } from 'vitest';
 import { createCrawler } from '@/index';
 import { crawlSite } from '@/crawl-site';
 import type { CrawlTarget } from '@/core/types';
-import { publicDns } from '../helpers';
+import { linkedDoc as html, publicDns } from '../helpers';
 
 // CRAWL-HOST-STATS-1: a run reports how its host behaved, and usage events name the host.
 
 const target: CrawlTarget = { baseUrl: 'https://stats.example.com', robotsPolicy: 'allow', active: true };
-const html = (links: string[]) =>
-  `<html><head><title>T</title></head><body><main><p>Weekly concerts at the riverside stage all summer long.</p>${links
-    .map((l) => `<a href="${l}">x</a>`)
-    .join('')}</main></body></html>`;
 
 function web() {
   globalThis.fetch = (async (input: RequestInfo | URL) => {

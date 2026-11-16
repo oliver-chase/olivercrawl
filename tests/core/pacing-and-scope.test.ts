@@ -3,7 +3,7 @@ import { createCrawler } from '@/index';
 import { crawlSite } from '@/crawl-site';
 import { intervalForHost, recordHostLatency } from '@/core/host-throttle';
 import type { CrawlTarget } from '@/core/types';
-import { publicDns } from '../helpers';
+import { htmlPage as page, publicDns } from '../helpers';
 
 // Ideas adapted from established crawlers (Scrapy's AutoThrottle,
 // LinkExtractor allow/deny, CLOSESPIDER_TIMEOUT), reimplemented to fit this
@@ -11,11 +11,6 @@ import { publicDns } from '../helpers';
 
 const target: CrawlTarget = { baseUrl: 'https://venue.example.com', robotsPolicy: 'allow', active: true };
 
-const page = (body: string) =>
-  new Response(`<html><head><title>T</title></head><body><main>${body}</main></body></html>`, {
-    status: 200,
-    headers: { 'content-type': 'text/html' },
-  });
 
 function crawler(extra = {}) {
   return createCrawler({ userAgent: 'T/1', dnsLookup: publicDns, ...extra });

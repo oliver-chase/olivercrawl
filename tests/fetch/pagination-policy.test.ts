@@ -1,10 +1,8 @@
 import { describe, expect, test, vi } from 'vitest';
 import { discoverPaginatedUrls, findNextPageUrl } from '@/extract/pagination-discovery';
-import { publicDns } from '../helpers';
+import { htmlResponse as html, publicDns } from '../helpers';
 
 // Pagination follows the crawler's own controls: same site only, the caller's resolver and user agent.
-
-const html = (body: string) => new Response(body, { status: 200, headers: { 'content-type': 'text/html' } });
 
 describe('discoverPaginatedUrls', () => {
   test('a rel=next link to another site is not followed', async () => {

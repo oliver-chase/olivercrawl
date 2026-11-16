@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import { createCrawler } from '@/index';
 import type { CrawlTarget } from '@/core/types';
-import { publicDns } from '../helpers';
+import { htmlResponse, publicDns } from '../helpers';
 
 // GUARD-TITLE-1: <title> lives in <head>, so it never reached the body-text or
 // markdown guard passes and was returned raw. README states every page passes
@@ -15,8 +15,7 @@ const CLEAN_BODY =
   '<main><p>The outdoor concert series runs every Friday evening at the riverside stage with free admission.</p></main>';
 
 function serve(html: string) {
-  globalThis.fetch = (async () =>
-    new Response(html, { status: 200, headers: { 'content-type': 'text/html' } })) as typeof fetch;
+  globalThis.fetch = (async () => htmlResponse(html)) as typeof fetch;
 }
 
 const crawl = (path: string) =>

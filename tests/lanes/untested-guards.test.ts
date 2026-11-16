@@ -2,7 +2,7 @@ import { describe, expect, test } from 'vitest';
 import { createCrawler } from '@/index';
 import { readBodyCapped } from '@/fetch/http-mechanics';
 import type { CrawlTarget } from '@/core/types';
-import { publicDns } from '../helpers';
+import { endlessBody, publicDns } from '../helpers';
 
 // Guards that need their own assertions: removing any one of them must fail a test.
 
@@ -43,16 +43,10 @@ describe('CRAWL-HARDEN-1 — the body cap bounds bytes', () => {
   });
 
   test('an endless body is not read past the cap', async () => {
-    let pulled = 0;
-    const chunk = new Uint8Array(64 * 1024).fill(97);
-    const endless = new ReadableStream<Uint8Array>({
-      pull(controller) {
-        pulled += chunk.byteLength;
-        controller.enqueue(chunk);
-      },
-    });
-    await readBodyCapped(new Response(endless), 100_000);
-    expect(pulled).toBeLessThanOrEqual(100_000 + 2 * chunk.byteLength);
+    const pulled = { bytes: 0 };
+    await readBodyCapped(endlessBody(pulled), 100_000);
+    // At most two 64 KB chunks past the cap.
+    expect(pulled.bytes).toBeLessThanOrEqual(100_000 + 2 * 64 * 1024);
   });
 
   test('a body under the cap is returned whole', async () => {

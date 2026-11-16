@@ -1,18 +1,14 @@
 import { describe, expect, test, vi } from 'vitest';
 import { createCrawler } from '@/index';
 import type { CrawlTarget } from '@/core/types';
-import { publicDns } from '../helpers';
+import { htmlPage, publicDns } from '../helpers';
 
 // Cache, per-host throttle and single-page retry: the three efficiency and
 // politeness gaps that existed once the crawler worked correctly.
 
 const target: CrawlTarget = { baseUrl: 'https://venue.example.com', robotsPolicy: 'allow', active: true };
 
-const page = (body = 'Page content here.') =>
-  new Response(`<html><head><title>T</title></head><body><main>${body}</main></body></html>`, {
-    status: 200,
-    headers: { 'content-type': 'text/html' },
-  });
+const page = (body = 'Page content here.') => htmlPage(body);
 
 describe('page cache', () => {
   test('off by default — a repeat fetch really refetches', async () => {

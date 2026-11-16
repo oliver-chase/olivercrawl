@@ -45,46 +45,20 @@ describe('a target that is not explicitly permitted never reaches the archive', 
     expect(r.pages[0]!.text).toContain('catalogue');
   });
 
-  test('robotsPolicy disallow: the site said no, and no copy is read', async () => {
+  const allowed: CrawlTarget = { baseUrl: 'https://site.example.com', robotsPolicy: 'allow', active: true };
+  test.each<[string, CrawlTarget, boolean, string]>([
+    ['robotsPolicy disallow: the site said no, and no copy is read', { ...allowed, robotsPolicy: 'disallow' }, true, '/x'],
+    ['robotsPolicy unknown: an archive does not launder an unresolved posture', { baseUrl: 'https://site.example.com', active: true }, true, '/x'],
+    ['off by default', allowed, false, '/x'],
+    ['a credentialed target is never looked up in a public archive', { ...allowed, headers: { authorization: 'Bearer secret' } }, true, '/members/x'],
+  ])('%s', async (_name, target, archiveOn, path) => {
     const hit = deadHostWithArchive();
-    const target: CrawlTarget = { baseUrl: 'https://site.example.com', robotsPolicy: 'disallow', active: true };
-    const r = await crawler().crawl(target, 'https://site.example.com/x');
+    // "Off by default" builds the crawler without the option at all.
+    const c = archiveOn ? crawler() : createCrawler({ userAgent: 'T/1 (+https://t.example.com)', dnsLookup: publicDns });
+    const r = await c.crawl(target, `https://site.example.com${path}`);
 
     expect(r.ok).toBe(false);
     expect(hit).toEqual([]); // the archive was not even asked
-  });
-
-  test('robotsPolicy unknown: an archive does not launder an unresolved posture', async () => {
-    const hit = deadHostWithArchive();
-    const target: CrawlTarget = { baseUrl: 'https://site.example.com', active: true };
-    const r = await crawler().crawl(target, 'https://site.example.com/x');
-
-    expect(r.ok).toBe(false);
-    expect(hit).toEqual([]);
-  });
-
-  test('off by default', async () => {
-    const hit = deadHostWithArchive();
-    const target: CrawlTarget = { baseUrl: 'https://site.example.com', robotsPolicy: 'allow', active: true };
-    const plain = createCrawler({ userAgent: 'T/1 (+https://t.example.com)', dnsLookup: publicDns });
-    const r = await plain.crawl(target, 'https://site.example.com/x');
-
-    expect(r.ok).toBe(false);
-    expect(hit).toEqual([]);
-  });
-
-  test('a credentialed target is never looked up in a public archive', async () => {
-    const hit = deadHostWithArchive();
-    const target: CrawlTarget = {
-      baseUrl: 'https://site.example.com',
-      robotsPolicy: 'allow',
-      active: true,
-      headers: { authorization: 'Bearer secret' },
-    };
-    const r = await crawler().crawl(target, 'https://site.example.com/members/x');
-
-    expect(r.ok).toBe(false);
-    expect(hit).toEqual([]);
   });
 });
 
