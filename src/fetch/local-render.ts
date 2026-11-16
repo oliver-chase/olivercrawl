@@ -81,21 +81,24 @@ const ACTION_STEP_TIMEOUT_MS = 5_000;
 export async function runActions(page: RenderPage, actions: BrowserAction[], origin: string): Promise<void> {
   const deadline = Date.now() + MAX_ACTION_TOTAL_MS;
 
+  // Every timed step is clamped to the time left, so the last one cannot run past the budget.
+  const left = (ms: number) => Math.max(0, Math.min(ms, deadline - Date.now()));
+
   for (const action of actions.slice(0, MAX_ACTIONS)) {
     if (Date.now() >= deadline) return;
 
     try {
       if (action.type === 'click') {
-        await page.click(action.selector, { timeout: ACTION_STEP_TIMEOUT_MS });
+        await page.click(action.selector, { timeout: left(ACTION_STEP_TIMEOUT_MS) });
       } else if (action.type === 'scroll') {
         const times = Math.min(Math.max(1, action.times ?? 1), 10);
         for (let i = 0; i < times; i++) {
           if (Date.now() >= deadline) return;
           await page.evaluate('window.scrollTo(0, document.body.scrollHeight)');
-          await page.waitForTimeout(500);
+          await page.waitForTimeout(left(500));
         }
       } else {
-        await page.waitForTimeout(Math.min(Math.max(0, action.ms), MAX_SINGLE_WAIT_MS));
+        await page.waitForTimeout(left(Math.min(Math.max(0, action.ms), MAX_SINGLE_WAIT_MS)));
       }
     } catch {
       // A missing selector usually means the list is fully loaded already. A failed click may still

@@ -1,5 +1,5 @@
-import { describe, expect, test } from 'vitest';
-import { renderViaLocalChromium, runActions, MAX_ACTIONS } from '@/fetch/local-render';
+import { describe, expect, test, vi } from 'vitest';
+import { renderViaLocalChromium, runActions, MAX_ACTIONS, MAX_ACTION_TOTAL_MS } from '@/fetch/local-render';
 import type { BrowserAction } from '@/fetch/local-render';
 
 // PARITY-ACTIONS-1: these are instructions driving a real browser on our own
@@ -59,6 +59,19 @@ describe('action bounds are enforced by the library', () => {
     const many: BrowserAction[] = Array.from({ length: 25 }, () => ({ type: 'scroll', times: 1 }));
     await run(fake, many);
     expect(fake.recorded.filter((r) => r.kind === 'scroll')).toHaveLength(MAX_ACTIONS);
+  });
+
+  test('the last wait is cut to the time left in the budget', async () => {
+    vi.useFakeTimers();
+    const fake = fakePage();
+    // Each wait takes its full time, so the clock moves the way a real browser's would.
+    fake.page.waitForTimeout = async (ms: number) => {
+      fake.recorded.push({ kind: 'wait', arg: ms });
+      vi.advanceTimersByTime(ms);
+    };
+    await run(fake, Array.from({ length: 5 }, () => ({ type: 'wait', ms: 4_900 }) as BrowserAction));
+    const waited = fake.recorded.reduce((sum, r) => sum + Number(r.arg), 0);
+    expect(waited).toBe(MAX_ACTION_TOTAL_MS);
   });
 });
 
