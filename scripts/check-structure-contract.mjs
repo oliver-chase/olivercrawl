@@ -64,7 +64,7 @@ if (existsSync(join(ROOT, 'package.json'))) {
     const scripts = pkg?.scripts && typeof pkg.scripts === 'object' ? Object.values(pkg.scripts) : []
     for (const command of scripts) {
       if (typeof command !== 'string') continue
-      const matches = command.match(/scripts\/[A-Za-z0-9._/-]+\.(?:mjs|js|sql)/g) || []
+      const matches = command.match(/scripts\/[A-Za-z0-9._/-]+\.(?:mjs|cjs|js|sql|sh|py)(?![A-Za-z0-9])/g) || []
       for (const match of matches) requireScriptReferenceTracked(match, 'package.json references missing build/runtime script')
     }
   } catch {
