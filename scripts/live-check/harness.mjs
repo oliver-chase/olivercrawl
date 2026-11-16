@@ -1,6 +1,4 @@
-// ─── Shared parts of the live check ────────────────────────────────────────
-//
-// The crawler, the resolver, the pass/fail bookkeeping and the summary that every live check file uses.
+// Shared parts of the live check: the crawler, the resolver, the pass and fail bookkeeping and the summary.
 
 import { createCrawler } from '../../dist/index.js';
 import { lookup } from 'node:dns/promises';

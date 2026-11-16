@@ -1,4 +1,4 @@
-// ─── Live checks: web search ───────────────────────────────────────────────
+// Live checks of web search, skipped without a provider key.
 
 import { configFromEnv, createCrawler, searchAndCrawl } from '../../dist/index.js';
 import { USER_AGENT, dns, check, assert, skipIfProviderUnavailable } from './harness.mjs';

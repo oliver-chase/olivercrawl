@@ -1,4 +1,4 @@
-// ─── Live checks: local Chromium rendering ─────────────────────────────────
+// Live checks of the local Chromium render rung.
 
 import { createCrawler } from '../../dist/index.js';
 import { renderViaLocalChromium } from '../../dist/fetch/local-render.js';

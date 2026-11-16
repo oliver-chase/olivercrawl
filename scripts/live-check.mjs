@@ -1,7 +1,5 @@
 #!/usr/bin/env node
-// ─── Live validation ────────────────────────────────────────────────────────
-//
-// Exercises every feature against REAL websites. The unit suite proves the
+// Runs every feature against real websites. The unit suite proves the
 // logic; this proves the logic survives contact with actual origins —
 // real redirects, real charsets, real robots.txt, real 304s.
 //

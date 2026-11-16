@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// ─── Extraction parity harness ──────────────────────────────────────────────
+// Compares this library's extraction with a consumer's own extractor on the same pages.
 //
 // CRAWL-PARITY-1. Before any consumer replaces its own extractor with this
 // library, somebody has to demonstrate the two agree. The migration assumed
