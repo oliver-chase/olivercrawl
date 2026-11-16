@@ -1,91 +1,36 @@
 # Reference
 
-Full option-by-option detail. Start with the [README](../README.md) if you just want to use the thing.
+How each feature behaves past the basics. The [README](../README.md) covers installing, the first crawl, the retrieval ladder, failures and configuration, and [API](API.md) lists every export and option.
 
----
-
-Governed web crawling for TypeScript. Two independent lanes: **our own crawler** (no API keys, no cost) and an optional **vendor lane** (Firecrawl, Apify). Use either. Use both. The free one is the default.
-
-Most scraping libraries give you "URL in, text out". This one also answers *should we have fetched that at all* — SSRF and DNS-rebinding guards, same-site enforcement, robots posture, and prompt-injection sanitising applied **before** page content ever reaches an LLM.
-
----
-
-## Why two paths
-
-The free `own` path needs no keys and runs on your machine. The paid `vendor` path is opt-in and bills per call. [LANES](LANES.md) holds the comparison and the rung order. Nothing bills unless a call asks it to: `lanes` defaults to `['own']`, and a missing vendor key disables that rung alone.
-
----
-
-## Install
-
-```bash
-npm install github:oliver-chase/olivercrawl#<tag>
-```
-
-## Use
+## What the guard reports on a page
 
 ```ts
-import { createCrawler, configFromEnv } from '@oliver/crawl-core';
-
-const crawler = createCrawler(configFromEnv(process.env, { userAgent: 'MyBot/1.0 (+https://mysite.example/bot)' }));
-const target = { baseUrl: 'https://events.example.org', robotsPolicy: 'allow' } as const;
-const result = await crawler.crawl(target, 'https://events.example.org/shows');
-
 if (result.ok && !result.notModified) {
   const page = result.pages[0]!;
-  page.text;      // sanitised, length-capped visible text — safe to send to an LLM
-  page.jsonLd;    // structured data, free and deterministic — no LLM needed
-  page.links;     // same-site links, for pagination or detail pages
-  page.httpEtag;  // pass back next time to get a free 304
-
-  // What the guard did to this page, as distinct from whether it refused it.
-  page.truncated;       // text or markdown hit maxTextChars — the tail was never seen
-  page.redactionCount;  // >0 means an injection pattern was found and masked
+  page.truncated;       // text or markdown hit maxTextChars, so the tail was never seen
+  page.redactionCount;  // above 0 when an injection pattern was found and masked
 }
 ```
 
-Neither is recoverable afterwards, which is why they are reported: a truncated
-page is one whose end you do not have, and a non-zero `redactionCount` means the
-text differs from what the origin served. Both change how far you should trust
-an extraction taken from it.
-
-Failure is a **returned value** and never an exception:
-
-```ts
-if (!result.ok) {
-  result.reason;        // 'blocked' | 'unreachable' | 'empty' | 'quarantined' | 'no_lane_available'
-  result.detail;        // human-readable explanation
-  result.failureClass;  // 'structural' | 'transient' — is retrying worth it?
-  result.quarantine;    // present ONLY when reason === 'quarantined'
-}
-```
+Neither is recoverable afterwards, which is why both are reported. A truncated page is one whose end you do not have, and a non-zero `redactionCount` means the text differs from what the origin served. Both change how far you should trust an extraction taken from that page.
 
 ### When a page is quarantined
 
-A quarantine is a policy decision about the page, which matters if
-you are the one who has to explain a missing page.
-
-`result.quarantine` carries what tripped the guard and enough of the page to
-review it — `signals`, `text`, and `title`. Without it a quarantine is
-indistinguishable from a timeout at your call site, which leaves you dropping
-the page silently. That is the outcome quarantining exists to prevent, so the
-evidence travels with the refusal.
+`result.quarantine` carries what tripped the guard and enough of the page to review it. Without it a quarantine looks like a timeout at your call site, and the page is dropped silently, which is the outcome quarantining exists to prevent.
 
 ```ts
 if (!result.ok && result.reason === 'quarantined') {
   result.quarantine.signals;  // which rules fired, with the matched text
-  result.quarantine.text;     // SANITIZED page text — redactions already applied
+  result.quarantine.text;     // sanitized page text, redactions already applied
   result.quarantine.title;
 }
 ```
 
-The text is sanitized, so a reviewer sees what the page said, and the copy
-carries no working instruction to paste into a model.
+The text is sanitized, so a reviewer sees what the page said and the copy carries no working instruction to paste into a model.
 
 ### When the origin has moved
 
-`result.originMoved` is present on a **successful** crawl when the direct fetch
-was refused for leaving the site and a fallback rung served the page anyway.
+`result.originMoved` is present on a successful crawl when the direct fetch was refused for leaving the site and a fallback rung served the page anyway.
 
 ```ts
 if (result.ok && !result.notModified && result.originMoved) {
@@ -94,11 +39,7 @@ if (result.ok && !result.notModified && result.originMoved) {
 }
 ```
 
-What a sold or parked domain looks like: the redirect is refused, a
-fallback follows it from its own IPs, and the new owner's content comes back
-under your URL. Refusing outright would be wrong — an off-domain redirect is
-routinely a real migration — so the crawl succeeds and tells you, and the
-decision stays with you. Absent on an ordinary crawl; its presence is the signal.
+This is what a sold or parked domain looks like: the redirect is refused, a fallback follows it from its own IPs, and the new owner's content comes back under your URL. An off-domain redirect is routinely a real migration, so the crawl succeeds, reports the move and leaves the decision with you. An ordinary crawl has no `originMoved`.
 
 ### Both lanes
 
@@ -106,26 +47,11 @@ decision stays with you. Absent on an ordinary crawl; its presence is the signal
 const result = await crawler.crawl(target, url, { lanes: ['own', 'vendor'] });
 ```
 
-Tries free first; escalates to a paid vendor only if the free lane can't reach the page. A **policy** refusal (off-domain, quarantined) never escalates — paying to route around your own guard is not a fallback.
+The free lane runs first, and a paid vendor runs only when it cannot reach the page. A policy refusal, such as an off-domain redirect or a quarantine, never escalates, because paying to route around your own guard is no fallback.
 
-### Crawling a whole site
+## Crawling a site
 
-```ts
-import { createCrawler, crawlSite } from '@oliver/crawl-core';
-
-const run = await crawlSite(crawler, target, {
-  seeds: ['https://example.com/catalog'],
-  followPagination: true,
-  maxPages: 5,
-});
-
-run.pages;        // everything fetched and parsed
-run.notModified;  // URLs that answered 304 — unchanged, and never failures
-run.failures;     // per-URL, so one bad page never sinks the run
-run.truncated;    // true if it stopped at maxPages with URLs still queued
-```
-
-Sequential by default (one request at a time), since hammering a small site in parallel is what gets a crawler blocked. [Crawling in parallel](#crawling-in-parallel) shows the opt-in. Already-visited URLs are never re-fetched, so a "next page" link that loops back to page 1 terminates.
+`crawlSite` runs one request at a time unless you ask for more, and it never fetches a visited URL twice, so a "next page" link that loops back to page 1 ends the run. Its result lists `pages`, `notModified` (304 answers, never failures), `failures` (per URL, so one bad page never sinks the run) and `truncated` (it stopped at `maxPages` with URLs still queued).
 
 ### Cheap re-crawls
 
@@ -282,8 +208,8 @@ site's navigation does not come back as hits. Asset links are excluded.
 
 It probes a handful of query shapes (`/?s=`, `/search?q=`, and a few others)
 and reports which one worked. Many sites have no usable search; that returns
-`ok: false` with a reason and never throws. This does **not** replace web
-search — it cannot tell you which sites exist.
+`ok: false` with a reason and never throws. It searches one known site, so
+finding which sites exist still takes `crawler.search()`.
 
 ### Mapping a site without crawling it
 
@@ -303,8 +229,7 @@ map.sources;  // { sitemap, feeds, homepageLinks } — why the result looks how 
 
 Exactly **one page body** is fetched: the homepage. Everything else comes from
 listing documents. Cheap enough to run *before* deciding what a real crawl
-should target, which makes `maxPages` a budget you spend deliberately instead
-of one the queue order spends for you.
+should target, so `maxPages` becomes a budget you spend deliberately.
 
 It is not a crawl — no recursion, no page content. Feed `map.urls` to
 `crawlSite` as `seeds` when you want the content. A missing sitemap or an
@@ -323,19 +248,11 @@ const seeds = await crawler.discoverSeeds(target, 100);
 
 Reads `/sitemap.xml` (following index files one level), filtered to same-site https URLs — a sitemap is origin-controlled content and gets no more trust than a page's own links. No sitemap falls back to `baseUrl`.
 
-### Letting the crawler govern itself
+### Non-HTML documents
 
-```ts
-const crawler = createCrawler({ userAgent: 'MyBot/1.0', autoRobots: true });
-```
+`page.contentKind` says which kind arrived, and only HTML fills the parsed fields:
 
-Without this, the crawler trusts the `robotsPolicy` you set on each target (and fails closed on `'unknown'`). With it, an unknown posture is resolved by actually fetching and parsing robots.txt — **cached per host**, so it costs one request per host regardless of page count. An explicit posture you set is never overridden.
-
-### Non-HTML documents (feeds, calendars, CSV, JSON)
-
-The own lane reads more than HTML. `page.contentKind` tells you what you got:
-
-| `contentKind` | From | `markdown` / `links` / `jsonLd` |
+| `contentKind` | From | `markdown`, `links`, `jsonLd` |
 |---|---|---|
 | `html` | text/html, xhtml | populated |
 | `calendar` | text/calendar (`.ics`) | empty |
@@ -345,55 +262,17 @@ The own lane reads more than HTML. `page.contentKind` tells you what you got:
 | `text` | text/plain | empty |
 | `pdf` | application/pdf | empty |
 
-Non-HTML kinds arrive verbatim in `page.text`. **Parsing them is yours** —
-the shape a feed or CSV should become is defined by your schema. Branch on
-`contentKind`, because `contentType` varies by server.
-
-A feed or calendar is usually more accurate and more stable than the page that renders it, so the fetch rung reads one.
-
-Images, video and other binaries are refused (`reason: 'empty'`), because HTML-parsing a JPEG produces confident nonsense. PDFs are read when the optional `unpdf` package is installed. The injection guard runs on
-every kind: a calendar feed is untrusted remote text like any page.
-
-Only `text` and `textSha256` are meaningful on non-HTML kinds; `markdown` and
-`contentRegionSha256` are empty, so a rung or kind change
-can never look like a content change.
+Branch on `contentKind`, because `contentType` varies by server. On non-HTML kinds only `text` and `textSha256` carry meaning, and `markdown` and `contentRegionSha256` are empty, so a rung or kind change never looks like a content change. The injection guard runs on every kind, since a calendar feed is untrusted remote text like any page.
 
 ## Deciding what to do next
 
 ```ts
-if (!result.ok) result.failureClass;  // 'transient' | 'structural'
-page.likelyEmptyState;                // loaded, but appears to say nothing
-page.extractorVersion;                // which extractor produced this
+page.likelyEmptyState;  // loaded, but appears to say nothing
+page.extractorVersion;  // which extractor produced this
 ```
 
-**`failureClass`** answers "is retrying worth it?". `transient` means the world might differ next time: timeouts, 5xx, bot walls (a 403 is transient, since it is a bot wall far more often than a permanent refusal) and resolver outages. `structural` means retrying changes nothing until something is fixed: a 404, a robots disallow, an inactive target, an unsupported content-type. Count consecutive `structural` failures per source to retire a dead one.
+`likelyEmptyState` flags pages that loaded and say nothing, such as "no results", "coming soon", parked domains and soft 404s. It is advisory, and the page is still returned in full, because an empty state is often a true fact worth recording.
 
-**`likelyEmptyState`** flags pages that loaded and say nothing ("no results", "coming soon", parked domains, soft-404s). It is advisory and the page is still returned in full, because an empty state is often a true fact worth recording.
+`extractorVersion` lets an extraction improvement reach pages you already stored. Keep it beside the page, and re-process when it falls behind `EXTRACTOR_VERSION`.
 
-**`extractorVersion`** lets an extraction improvement reach pages you already stored. Keep it beside the page, and re-process when it falls behind `EXTRACTOR_VERSION`.
-
-## Feeding an LLM: use `markdown`
-
-`page.markdown` is the main content region with headings, lists, tables and links preserved and the page furniture removed. `page.text` is the flat visible text, kept for compatibility. A schedule table in `text` is an unlabelled token soup; in `markdown` the columns keep their meaning. Both fields pass the injection guard. `markdown` is empty on text-only rungs (Jina, vendor), so fall back to `text` when it is.
-
----
-
-## API and configuration
-
-[API](API.md) lists every export, the search surface and every configuration option.
-
-## Design rules
-
-[ARCHITECTURE](ARCHITECTURE.md#why-the-boundaries-are-where-they-are) lists the boundaries: no database, no env reads in core, extraction into your records is yours, the two paths are separate and policy refusals never escalate. A failure is a returned value and only programmer error throws, every rung is optional, and the guard runs before you see the text.
-
----
-
-## Development
-
-`npm run check` runs the type check, the tests, the decision-record gate and the comment-budget gate. [README](../README.md#development) lists the other scripts.
-
-## License
-
-MIT
-
----
+`markdown` is empty on the text-only rungs (Jina and the vendors), so fall back to `text` when it is.

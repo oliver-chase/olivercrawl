@@ -179,14 +179,15 @@ const crawler = createCrawler(
 - `headers` on a target carries credentials you already hold. They go only to that target's own host, and a redirect cannot carry a token to another origin. The library never acquires, stores or refreshes credentials
 - The library ships no database. Your application owns persistence through a `CrawlStore`, plus scheduling and the conversion of pages into your own objects
 
-[REFERENCE](docs/REFERENCE.md) lists every option and return field.
+[API](docs/API.md) lists every option and return field, and [REFERENCE](docs/REFERENCE.md) shows each feature in use.
 
 ## Documentation
 
 | Document | Purpose |
 | --- | --- |
 | [ADOPTING](docs/ADOPTING.md) | Starting a new project, replacing a crawler you run, and troubleshooting |
-| [REFERENCE](docs/REFERENCE.md) | Every option and return field |
+| [REFERENCE](docs/REFERENCE.md) | How each feature behaves past the basics |
+| [API](docs/API.md) | Every export, option and return field |
 | [CATALOG](docs/CATALOG.md) | The scripts and config files, each with its job, generated from their own descriptions |
 | [LANES](docs/LANES.md) | The retrieval ladder, rung by rung |
 | [ARCHITECTURE](docs/ARCHITECTURE.md) | Request flow and design boundaries |
