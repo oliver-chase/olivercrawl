@@ -75,6 +75,8 @@ describe('the archive rung needs an allow posture', () => {
     expect(() => assertTargetEligible(target)).not.toThrow();
     const result = await crawler.crawl(target, 'https://cond.example.com/x', { retries: 0 });
     expect(result.ok).toBe(false);
+    // The origin was asked and refused, so the archive was the next rung it could have tried.
+    expect(asked).toContain('cond.example.com');
     expect(asked).not.toContain('web.archive.org');
   });
 });

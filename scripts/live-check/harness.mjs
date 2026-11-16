@@ -31,7 +31,7 @@ export class Unavailable extends Error {}
 
 /** Provider quota/auth responses, which say nothing about our code. */
 export function skipIfProviderUnavailable(detail) {
-  if (/HTTP (400|401|402|403|429|432)/.test(detail)) {
+  if (/HTTP (401|402|403|429|432)/.test(detail)) {
     throw new Unavailable(detail);
   }
 }
