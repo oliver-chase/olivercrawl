@@ -9,10 +9,10 @@ import { publicDns } from '../helpers';
 // GUARD-LINEAR-1 and CRAWL-PDF-CAP-1: hostile input is scanned in bounded time, image alt text is guarded,
 // the address checker follows the address, and a PDF is read only up to the body cap.
 
-/** The fastest of three runs, so a busy machine does not decide the result. */
+/** The fastest of five runs, so a busy machine does not decide the result. */
 const timed = (run: () => void) =>
   Math.min(
-    ...[0, 1, 2].map(() => {
+    ...[0, 1, 2, 3, 4].map(() => {
       const started = performance.now();
       run();
       return performance.now() - started;
@@ -20,8 +20,9 @@ const timed = (run: () => void) =>
   );
 
 // Linear work grows 8x when the input grows 8x, and quadratic work grows 64x, so the ratio tells them apart on a busy machine.
+// The small input takes several milliseconds, so timer resolution and a stray pause cannot swamp the ratio.
 const growth = (input: (n: number) => string) =>
-  timed(() => sanitizeCrawledText(input(160_000), 400_000)) / Math.max(timed(() => sanitizeCrawledText(input(20_000), 400_000)), 1);
+  timed(() => sanitizeCrawledText(input(640_000), 1_000_000)) / timed(() => sanitizeCrawledText(input(80_000), 1_000_000));
 
 describe('the guard runs in linear time', () => {
   test('a long run of letters', () => {
