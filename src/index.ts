@@ -45,6 +45,8 @@ export type Crawler = {
    *  crawler's User-Agent and DNS resolver. Free. Empty list when the site
    *  has no sitemap, which is a normal condition. */
   discoverSeeds: (target: CrawlTarget, maxUrls?: number) => Promise<string[]>;
+  /** The page budget crawlSite uses when its options name none: the config's `defaults.maxPages`. */
+  defaultMaxPages?: number;
 };
 
 export function createCrawler(config: CrawlConfig): Crawler {
@@ -60,6 +62,7 @@ export function createCrawler(config: CrawlConfig): Crawler {
     ).entries;
 
   return {
+    defaultMaxPages: resolved.defaults.maxPages,
     vendorRungs: () => availableVendorRungs(resolved),
     searchProviders: () => availableSearchProviders(resolved),
     discoverSeeds: async (target, maxUrls) => (await discoverEntries(target, maxUrls)).map((entry) => entry.url),

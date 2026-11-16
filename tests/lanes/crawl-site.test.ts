@@ -126,6 +126,19 @@ describe('crawlSite — budget and dedup', () => {
     expect(result.truncated).toBe(true);
   });
 
+  test('the crawler default sets the budget, and an explicit maxPages wins', async () => {
+    globalThis.fetch = (async () => page('Content.')) as typeof fetch;
+    const seeds = ['https://venue.example.com/1', 'https://venue.example.com/2', 'https://venue.example.com/3'];
+    const configured = createCrawler({
+      userAgent: 'T/1',
+      dnsLookup: publicDns,
+      defaults: { maxTextChars: 50_000, timeoutMs: 10_000, maxPages: 1 },
+    });
+
+    expect((await crawlSite(configured, target, { seeds })).pages).toHaveLength(1);
+    expect((await crawlSite(configured, target, { seeds, maxPages: 3 })).pages).toHaveLength(3);
+  });
+
   test('a duplicate seed is fetched once', async () => {
     let calls = 0;
     globalThis.fetch = (async () => {

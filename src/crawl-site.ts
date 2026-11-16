@@ -83,7 +83,7 @@ export async function crawlSite(
   const recrawlMax = Math.max(recrawlMin, options.recrawlMaxIntervalMs ?? DEFAULT_RECRAWL_MAX_INTERVAL_MS);
   const notDue: string[] = [];
   let lastProgress: CrawlProgress | null = options.resumeFrom ?? null;
-  const maxPages = Math.max(1, options.maxPages ?? DEFAULT_MAX_PAGES);
+  const maxPages = Math.max(1, options.maxPages ?? crawler.defaultMaxPages ?? DEFAULT_MAX_PAGES);
   const maxRetries = Math.max(0, options.maxRetries ?? DEFAULT_MAX_RETRIES);
 
   const pages: CrawlPage[] = [];

@@ -22,6 +22,7 @@ Safety
 - the guard folds Cyrillic and Greek lookalike letters before detection
 
 Correctness
+- `crawlSite` reads the crawler's `defaults.maxPages` when its options name no `maxPages`, and an explicit `maxPages` still wins
 - a page whose crawl throws is reported as one failure and the rest of the run continues, and a refused target leaves the stored snapshot as it was
 - `seeds: []` falls back to the base URL, include and exclude patterns with the `g` flag match every time, and `mapSite` reports truncation only when a URL was dropped
 - a reserved header such as `User-Agent` no longer counts as a credential, a thin page or a bot wall records that the origin answered, and a quarantined render is counted once in usage
