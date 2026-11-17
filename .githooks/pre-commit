@@ -90,7 +90,6 @@ trap 'log_failure $?' EXIT
 # baseline_field KEY JSON: the whole number that KEY holds in a docs/SIZE-BASELINE.json text, or nothing. Both the
 # size ratchet and the commit-msg hook read the baseline with this one function.
 baseline_field() {
-  # sed reads to the end and a second sed takes the first match, so the writer never meets a closed pipe under pipefail.
   printf '%s\n' "$2" | sed -n '/"'"$1"'"[[:space:]]*:/{s/.*"'"$1"'"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\).*/\1/p;}' | sed -n 1p
 }
 # ─── Gate 1: Secrets ──────────────────────────────────────────────────────────
