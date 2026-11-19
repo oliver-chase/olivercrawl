@@ -15,3 +15,12 @@ coverage/
 scratch/
 
 .secrets/
+
+# Credentials and secrets
+.env.*
+!.env.example
+!.env.local.example
+*.pem
+*.key
+.secrets/*
+!.secrets/README.md
