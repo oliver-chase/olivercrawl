@@ -4,7 +4,7 @@ f72c32a27ca1dfb3fc118a1407fd5bc60c60c08a .githooks/commit-msg
 2da95f45025f52c68abc627ff7abb4885db289f6 .githooks/pre-commit
 73c18212e9fbcc3ffff934cce5bddf866da12c4f .githooks/pre-push
 f4e9b02bc7f7f873017011286cc1556987ed329d .github/workflows/check.yml
-139c7037c3f9bfab1b35b3a85f36d119be953a7b .gitignore
+83f4fc2aec375af2ffcd5845efae12660d9a370d .gitignore
 a55c3c9ac7a5337edbd5e501b79f6f5ebe0c02b5 CHANGELOG.md
 1f4bc10e2347e644698ab651265aef2cb596c183 CLAUDE.md
 0e513eaf6c590bdaddaafe6b0d551bedd4acff47 LICENSE
