@@ -40,3 +40,8 @@ This repo works on `main`. A change lands after `bash scripts/validate.sh` passe
 
 - hooks: the shared hook has no slot for the `.private-patterns` string scan, so `scripts/validate.sh` runs it and the commit hook does not. Expires 2027-02-01
 - learning: a library with no live results to measure. Expires 2027-02-01
+
+## Top-level folders
+
+- `src/`: application source code
+- `tests/`: automated tests
