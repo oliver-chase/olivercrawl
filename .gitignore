@@ -14,8 +14,6 @@ coverage/
 
 scratch/
 
-.secrets/
-
 # Credentials and secrets
 .env.*
 !.env.example

@@ -15,13 +15,13 @@ function ignored(path: string): boolean {
 
 describe('.gitignore', () => {
   it('ignores credential files so they cannot be staged by accident', () => {
-    for (const path of ['.env', '.env.production', 'deploy.pem', 'signing.key', '.secrets/token']) {
+    for (const path of ['.env', '.env.production', 'deploy.pem', 'signing.key', '.secrets/token', '.secrets/anything-else']) {
       expect(ignored(path), path).toBe(true);
     }
   });
 
-  it('keeps the example env files trackable', () => {
-    for (const path of ['.env.example', '.env.local.example']) {
+  it('keeps the example env files and the secrets README trackable', () => {
+    for (const path of ['.env.example', '.env.local.example', '.secrets/README.md']) {
       expect(ignored(path), path).toBe(false);
     }
   });
