@@ -5,7 +5,7 @@
 //
 //   npm run live
 //
-// Deliberately kept OUT of `npm test`: it needs network, it is slower, and a
+// Deliberately kept OUT of the unit suite: it needs network, it is slower, and a
 // third-party site being down is not a reason to fail a build. Run it before
 // a release or after touching the fetch path.
 //
